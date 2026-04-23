@@ -35,19 +35,25 @@ def _get_client() -> Anthropic:
     if _cached_client is not None and now < _token_expires_at - 300:
         return _cached_client
 
-    try:
-        creds = json.loads(_CREDENTIALS_PATH.read_text())
-        oauth = creds["claudeAiOauth"]
-        token = oauth["accessToken"]
-        _token_expires_at = oauth["expiresAt"] / 1000  # ms → s
-        _cached_client = Anthropic(api_key=token)
-        logger.debug("Anthropic client initialised from Claude Max OAuth token (expires %s)",
-                     time.strftime("%Y-%m-%d %H:%M", time.localtime(_token_expires_at)))
-        return _cached_client
-    except Exception as e:
-        raise RuntimeError(
-            f"No ANTHROPIC_API_KEY set and could not read Claude Code OAuth token: {e}"
-        ) from e
+    last_exc: Exception | None = None
+    for attempt in range(4):
+        try:
+            creds = json.loads(_CREDENTIALS_PATH.read_text())
+            oauth = creds["claudeAiOauth"]
+            token = oauth["accessToken"]
+            _token_expires_at = oauth["expiresAt"] / 1000  # ms → s
+            _cached_client = Anthropic(api_key=token)
+            logger.debug("Anthropic client initialised from Claude Max OAuth token (expires %s)",
+                         time.strftime("%Y-%m-%d %H:%M", time.localtime(_token_expires_at)))
+            return _cached_client
+        except Exception as e:
+            last_exc = e
+            if attempt < 3:
+                # Credentials file may be briefly unavailable during OAuth token refresh
+                time.sleep(2 ** attempt)
+    raise RuntimeError(
+        f"No ANTHROPIC_API_KEY set and could not read Claude Code OAuth token: {last_exc}"
+    ) from last_exc
 
 
 def _call_with_retry(system_prompt: str, user_message: str, model: str) -> str:

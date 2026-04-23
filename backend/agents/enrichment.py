@@ -4,7 +4,7 @@ from backend.integrations.supabase_client import supabase
 from backend.integrations.website_checker import check_for_chatbot
 from backend.integrations.web_researcher import apollo_enrich_person, scrape_website_text, search_web
 from backend.utils.anthropic_client import generate
-from backend.prompts.system_prompts import ENRICHMENT_SYSTEM_PROMPT
+from backend.prompts.system_prompts import ENRICHMENT_SYSTEM_PROMPT, INVESTOR_ENRICHMENT_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -191,6 +191,113 @@ Return valid JSON only — no markdown, no explanation."""
             " (chatbot penalty)" if chatbot_detected else "",
             enrichment.get("warmth"),
         )
+
+    return enrichment
+
+
+def enrich_investor(investor_data: dict) -> dict:
+    """Enrich an investor target with real web research, then Claude synthesis.
+
+    Gathers Apollo contact profile, firm website, and web search results for
+    the contact person and firm. Stores structured enrichment_data in Supabase.
+    """
+    investor_id = investor_data.get("id")
+    firm = investor_data.get("firm_name", "")
+    contact = investor_data.get("contact_name", "")
+    contact_linkedin = investor_data.get("contact_linkedin", "")
+    website = investor_data.get("website_url", "")
+
+    first, *rest = contact.split(" ") if contact else ("", [])
+    last = " ".join(rest) if rest else ""
+
+    logger.info("Researching investor contact %s at %s", contact, firm)
+
+    apollo = apollo_enrich_person(
+        first_name=first,
+        last_name=last,
+        company_domain=website,
+        linkedin_url=contact_linkedin,
+    )
+
+    website_text = scrape_website_text(website) if website else ""
+
+    person_results = search_web(f'"{contact}" "{firm}" investor venture', max_results=4)
+    firm_results = search_web(f'"{firm}" portfolio investment hospitality AI SaaS 2024 2025', max_results=4)
+
+    employment_text = ""
+    if apollo.get("employment_history"):
+        lines = [
+            f"  {j['start']}–{j['end'] if not j['current'] else 'present'}: {j['title']} at {j['company']}"
+            for j in apollo["employment_history"]
+        ]
+        employment_text = "\n".join(lines)
+
+    person_snippets = "\n".join(
+        f"- {r['title']}: {r['snippet']}" for r in person_results if r.get("snippet")
+    ) or "No results."
+
+    firm_snippets = "\n".join(
+        f"- {r['title']}: {r['snippet']}" for r in firm_results if r.get("snippet")
+    ) or "No results."
+
+    user_message = f"""Research this investor contact and produce a structured enrichment profile.
+
+INVESTOR TARGET:
+  Firm: {firm}
+  Type: {investor_data.get('investor_type', 'Unknown')}
+  Tier: {investor_data.get('tier', 'Unknown')}
+  Contact: {contact}
+  Contact LinkedIn: {contact_linkedin or 'Not provided'}
+  Why fit (existing notes): {investor_data.get('why_fit', 'Not provided')}
+  Warm path (existing notes): {investor_data.get('warm_path', 'None')}
+  Check size: {investor_data.get('check_size_range', 'Unknown')}
+
+APOLLO CONTACT PROFILE:
+  Headline: {apollo.get('headline', 'Not found')}
+  Location: {apollo.get('city', '')}, {apollo.get('country', '')}
+  Employment history:
+{employment_text or '  Not found'}
+
+FIRM WEBSITE:
+{website_text[:1500] or 'Could not fetch.'}
+
+WEB SEARCH — CONTACT MENTIONS:
+{person_snippets}
+
+WEB SEARCH — FIRM / PORTFOLIO NEWS:
+{firm_snippets}
+
+Return valid JSON only — no markdown, no explanation."""
+
+    raw = generate(INVESTOR_ENRICHMENT_SYSTEM_PROMPT, user_message)
+
+    try:
+        enrichment = json.loads(raw)
+    except json.JSONDecodeError:
+        cleaned = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        try:
+            enrichment = json.loads(cleaned)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse investor enrichment JSON for %s: %s", investor_id, raw[:200])
+            enrichment = {"fit_score": 0, "notes": raw[:500]}
+
+    if investor_id:
+        if apollo:
+            enrichment["apollo_profile"] = apollo
+
+        update_payload = {
+            "enrichment_data": enrichment,
+            "pipeline_stage": "research_needed"
+            if investor_data.get("pipeline_stage") == "identified"
+            else investor_data.get("pipeline_stage"),
+        }
+        if apollo.get("email") and not investor_data.get("contact_email"):
+            update_payload["contact_email"] = apollo["email"]
+        if apollo.get("linkedin_url") and not investor_data.get("contact_linkedin"):
+            update_payload["contact_linkedin"] = apollo["linkedin_url"]
+
+        supabase.table("investor_targets").update(update_payload).eq("id", investor_id).execute()
+        logger.info("Investor %s (%s) enriched — fit score %s", firm, contact, enrichment.get("fit_score"))
 
     return enrichment
 

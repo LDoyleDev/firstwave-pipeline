@@ -16,3 +16,9 @@ export const approveInvestor = (id) =>
 
 export const rejectInvestor = (id) =>
   updateInvestor(id, { pipeline_stage: 'pass' })
+
+export const enrichInvestor = (id) =>
+  apiFetch(`/investors/${id}/enrich`, { method: 'POST' })
+
+export const generateInvestorOutreach = (id) =>
+  apiFetch(`/investors/${id}/generate-outreach`, { method: 'POST' })

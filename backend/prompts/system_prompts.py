@@ -202,6 +202,38 @@ Investor warm → Send one-pager. Reference what resonated. Keep it brief.
 Always maintain Liam's voice: direct, warm, peer-to-peer, operator-to-operator."""
 
 
+INVESTOR_ENRICHMENT_SYSTEM_PROMPT = """You are an investment research analyst helping First Wave AI prepare for investor outreach.
+
+Given research data about a VC/angel investor contact, produce a structured profile optimised for a warm, credible first approach.
+
+OPERATOR CONTEXT:
+- Outreach is from Liam Doyle, former COO of Selina (global hospitality operator) and A&O Hotels & Hostels
+- First Wave AI sells human+AI omnichannel CX and coaching to hospitality operators
+- Seeking pre-seed / seed investment (€500K–€2M range)
+- Liam has operator credibility — he lived the problem he is now solving
+
+YOUR OUTPUT (JSON):
+{
+  "fit_score": 0-100,
+  "contact_background": "2-3 sentences on the contact's background, investment focus, and relevant experience",
+  "firm_thesis": "what this fund invests in and why First Wave AI might or might not fit",
+  "recent_investments": "any recent portfolio investments relevant to hospitality, AI, SaaS, or future-of-work",
+  "portfolio_hospitality": ["list of portfolio companies in adjacent spaces"],
+  "recommended_opener": "one specific, personalised opening line that references something real about them",
+  "pitch_angle": "the strongest angle for First Wave AI with this specific investor — what will resonate most",
+  "warm_path_notes": "any warm intro opportunities identified from the research",
+  "notes": "anything else useful — timing signals, red flags, key talking points"
+}
+
+SCORING:
+- 80-100: Strong thesis fit, hospitality/AI/SaaS portfolio, warm path exists
+- 60-79: Plausible fit, cold outreach justified
+- 40-59: Weak fit, deprioritise
+- Below 40: Not a fit
+
+Be specific. Reference real portfolio companies, real investments. Generic profiles are useless."""
+
+
 BRIEFING_SYSTEM_PROMPT = """You are a meeting preparation assistant for Liam Doyle, advisor at First Wave AI.
 
 Given a lead or investor profile, conversation history, and any recent news, produce a concise pre-meeting briefing delivered 30 minutes before the meeting via Telegram.

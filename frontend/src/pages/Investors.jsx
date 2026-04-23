@@ -6,7 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Investors() {
   const { data: investors = [], isLoading } = useAllInvestors()
-  const [selected, setSelected] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
+  const selected = investors.find(i => i.id === selectedId) ?? null
 
   if (isLoading) return <Skeleton className="h-96 w-full" />
 
@@ -38,12 +39,12 @@ export default function Investors() {
               tier={tier}
               investors={byTier[tier] ?? []}
               defaultOpen={tier === 1}
-              onRowClick={setSelected}
+              onRowClick={(inv) => setSelectedId(inv.id)}
             />
           ))}
         </table>
       </div>
-      <InvestorDetailSheet investor={selected} onClose={() => setSelected(null)} />
+      <InvestorDetailSheet investor={selected} onClose={() => setSelectedId(null)} />
     </>
   )
 }

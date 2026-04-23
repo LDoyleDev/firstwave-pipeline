@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { updateInvestor, approveInvestor, rejectInvestor } from '@/api/investors'
+import { updateInvestor, approveInvestor, rejectInvestor, enrichInvestor, generateInvestorOutreach } from '@/api/investors'
 
 export function useInvestors(tier, stage) {
   return useQuery({
@@ -41,6 +41,22 @@ export function useRejectInvestor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id) => rejectInvestor(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['investors'] }),
+  })
+}
+
+export function useEnrichInvestor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => enrichInvestor(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['investors'] }),
+  })
+}
+
+export function useGenerateInvestorOutreach() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => generateInvestorOutreach(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['investors'] }),
   })
 }

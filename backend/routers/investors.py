@@ -49,6 +49,28 @@ def get_investor(investor_id: str) -> dict:
     return result.data
 
 
+@router.post("/{investor_id}/enrich")
+def enrich_investor_endpoint(investor_id: str) -> dict:
+    """Trigger enrichment agent for a single investor target."""
+    from backend.agents.enrichment import enrich_investor
+    result = supabase.table("investor_targets").select("*").eq("id", investor_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Investor not found")
+    enrichment = enrich_investor(result.data)
+    return {"investor_id": investor_id, "enrichment": enrichment}
+
+
+@router.post("/{investor_id}/generate-outreach")
+def generate_investor_outreach_endpoint(investor_id: str) -> dict:
+    """Generate email drafts for a single investor target."""
+    from backend.agents.outreach import generate_investor_outreach
+    result = supabase.table("investor_targets").select("id").eq("id", investor_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Investor not found")
+    draft = generate_investor_outreach(investor_id)
+    return {"investor_id": investor_id, "draft": draft}
+
+
 @router.patch("/{investor_id}")
 def update_investor(investor_id: str, update: InvestorUpdate) -> dict:
     """Update an investor target record."""
