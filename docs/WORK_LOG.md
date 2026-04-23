@@ -2,6 +2,41 @@
 
 ---
 
+## 2026-04-23 — Phase 5: Scheduling + Meeting Flow
+
+### Built
+- `backend/routers/meetings.py` — added 3 new endpoints:
+  - `GET /meetings/upcoming-briefings`: queries meetings within 35 min with briefing_sent=false; calls `generate_briefing()` for each, sends via Telegram, marks briefing_sent=true; called by n8n every 10 min
+  - `GET /meetings/completed-pending-feedback`: finds meetings that ended 20+ min ago with no voice feedback; sends Telegram prompt, updates status to 'completed'; called by n8n every 5 min
+  - `POST /meetings/{id}/confirm-followup`: sends stored follow_up_draft via Gmail, marks follow_up_sent=true, updates pipeline stage
+  - Top-level `send_email` import added (was local import)
+- `backend/agents/intent_parser.py` — upgraded 4 handlers from stubs to full implementations:
+  - `_handle_book_meeting`: resolves date/slot from natural language, looks up attendee in DB, creates Cal.com booking + Google Calendar event + Supabase meeting record, sends Telegram confirmation
+  - `_handle_pre_meeting_briefing`: queries next scheduled meeting and returns details
+  - `_handle_post_meeting_feedback`: finds most recent completed meeting, calls `generate_followup()`, sends draft to Telegram with YES confirmation prompt
+  - `_handle_send_followup`: finds most recent meeting with draft but follow_up_sent=false, sends via Gmail, updates stage
+  - Module-level imports for calcom_client, calendar_client, gmail_client, telegram_bot
+- `n8n-workflows/meeting_briefing.json` — filled stub with real workflow: cron every 10 min → GET /meetings/upcoming-briefings
+- `n8n-workflows/post_meeting_prompt.json` — new workflow: cron every 5 min → GET /meetings/completed-pending-feedback
+- `backend/tests/test_phase5.py` — 10 tests covering all new endpoints and intent handlers
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `pytest backend/tests/ -v` | 46/46 passed ✓ (36 existing + 10 Phase 5) |
+| Backend imports | ✓ |
+| DB connection | ✓ |
+
+### Known issues / notes
+- `_handle_book_meeting` falls back gracefully when Cal.com / Google Calendar credentials are missing — meeting is still created in Supabase
+- `_handle_post_meeting_feedback` auto-selects the most recent completed meeting — edge case if two meetings close together; operator can use `/meetings/{id}/feedback` directly if needed
+- Python 3.12 deprecation warning for `asyncio.get_event_loop()` in intent handlers (no event loop in test context) — harmless, will resolve when running under ASGI
+
+### Next
+Phase 7 — Seed Data + Final Polish (investor seed data, Tailscale access confirmation, end-to-end smoke test, README)
+
+---
+
 ## 2026-04-23 — Phase 4: Outreach Engine
 
 ### Built

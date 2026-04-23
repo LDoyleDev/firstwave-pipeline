@@ -1,9 +1,9 @@
 {
-  "name": "Meeting Briefing Trigger",
+  "name": "Post-Meeting Feedback Prompt",
   "nodes": [
     {
-      "id": "cron-every-10m",
-      "name": "Every 10 Minutes Trigger",
+      "id": "cron-every-5m",
+      "name": "Every 5 Minutes Trigger",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [240, 300],
@@ -12,7 +12,7 @@
           "item": [
             {
               "mode": "everyX",
-              "value": 10,
+              "value": 5,
               "unit": "minutes"
             }
           ]
@@ -20,26 +20,26 @@
       }
     },
     {
-      "id": "http-upcoming-briefings",
-      "name": "GET /meetings/upcoming-briefings",
+      "id": "http-completed-pending",
+      "name": "GET /meetings/completed-pending-feedback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [460, 300],
       "parameters": {
         "method": "GET",
-        "url": "http://localhost:8000/meetings/upcoming-briefings",
+        "url": "http://localhost:8000/meetings/completed-pending-feedback",
         "options": {
-          "timeout": 60000
+          "timeout": 30000
         }
       }
     }
   ],
   "connections": {
-    "Every 10 Minutes Trigger": {
+    "Every 5 Minutes Trigger": {
       "main": [
         [
           {
-            "node": "GET /meetings/upcoming-briefings",
+            "node": "GET /meetings/completed-pending-feedback",
             "type": "main",
             "index": 0
           }
@@ -48,5 +48,5 @@
     }
   },
   "active": true,
-  "description": "Runs every 10 minutes. Generates and sends pre-meeting briefings for meetings starting within 35 minutes."
+  "description": "Runs every 5 minutes. Detects meetings that ended 20+ minutes ago without feedback and sends Telegram prompts to the operator."
 }
