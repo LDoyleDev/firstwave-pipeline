@@ -2,6 +2,39 @@
 
 ---
 
+## 2026-04-23 — Phase 3: Integrations
+
+### Built
+- `backend/integrations/groq_client.py` — `transcribe_audio(audio_bytes, filename)`: Groq Whisper large-v3; supports OGG/WAV/MP3/M4A/WEBM; handles both object and string response formats
+- `backend/integrations/telegram_bot.py` — `Application` with 6 handlers (`/start`, `/pipeline`, `/review`, `/next`, voice, text); `process_webhook_update(data)` for FastAPI webhook; `send_operator_message()` for outbound notifications; operator-only guard on all handlers
+- `backend/integrations/gmail_client.py` — `send_email(to, subject, body, reply_to_message_id)` → gmail_message_id; `check_replies(sequence_ids)` → list of {replied: bool, reply_snippet}; OAuth2 via GOOGLE_REFRESH_TOKEN; plain-text only
+- `backend/integrations/calendar_client.py` — `create_event()` → google_event_id; `cancel_event()` → bool; `get_todays_events()` → events in 10:30–11:30 block; same OAuth2 credentials as Gmail
+- `backend/integrations/calcom_client.py` — `get_available_slots(date)`, `create_booking(slot_time, name, email, notes)`, `cancel_booking(cal_event_id)`; parses CALCOM_EVENT_TYPE_ID URL to extract username+slug; lazy-fetches numeric event type ID and caches it
+- `backend/integrations/apollo_client.py` — `find_person_email(first, last, domain)` → email|None; `search_leads(titles, industry, geography, limit)` → list; 2s rate-limit delay between requests
+- `backend/integrations/phantombuster_client.py` — `launch_linkedin_search_scraper(url, limit)` → container_id; `get_scraper_results(container_id)` → list; polls every 10s up to 2min; parses both JSON and CSV output formats
+- `backend/routers/voice.py` — `POST /webhook/telegram` (Telegram webhook, always 200); `POST /voice/feedback` (multipart: meeting_id + audio → transcript + follow-up draft)
+- `backend/main.py` — Removed `/webhook` prefix from voice router; paths now defined in router directly
+- `backend/tests/test_integrations.py` — 14 tests covering all 7 integrations + webhook endpoint (all mocked)
+- `requirements.txt` — Pinned `httpx>=0.27.0,<0.28.0` to resolve python-telegram-bot 20.7 / httpx 0.28 incompatibility (proxies kwarg removed in 0.28)
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `pytest backend/tests/ -v` | 26/26 passed ✓ (12 agent + 14 integration) |
+| Backend imports | ✓ |
+| DB connection | ✓ |
+
+### Known issues / notes
+- `LINKEDIN_SESSION_COOKIE` not yet in `.env` — required for PhantomBuster to authenticate LinkedIn; set before first scraper launch
+- Cal.com event type numeric ID is resolved lazily on first booking; if API shape differs, set `CALCOM_EVENT_TYPE_NUMERIC_ID` manually
+- Telegram webhook URL must be registered with Telegram: `POST https://api.telegram.org/bot{TOKEN}/setWebhook?url=https://{your-domain}/webhook/telegram`
+- Google credentials use refresh token flow — no interactive OAuth needed
+
+### Next
+Phase 4 — Outreach Engine (discovery, review queue, sequence executor, reply detection, n8n workflows)
+
+---
+
 ## 2026-04-23 — Phase 2: AI Agents
 
 ### Built

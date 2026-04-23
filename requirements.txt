@@ -9,6 +9,6 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
-httpx
+httpx>=0.27.0,<0.28.0
 pydantic
 python-multipart

@@ -21,7 +21,7 @@ app.include_router(leads.router, prefix="/leads", tags=["leads"])
 app.include_router(investors.router, prefix="/investors", tags=["investors"])
 app.include_router(meetings.router, prefix="/meetings", tags=["meetings"])
 app.include_router(sequences.router, prefix="/sequences", tags=["sequences"])
-app.include_router(voice.router, prefix="/webhook", tags=["voice"])
+app.include_router(voice.router, tags=["voice"])  # paths defined in router: /webhook/telegram, /voice/feedback
 
 
 @app.get("/health")
