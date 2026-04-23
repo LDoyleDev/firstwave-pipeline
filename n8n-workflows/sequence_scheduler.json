@@ -1,0 +1,6 @@
+{
+  "name": "Sequence Scheduler",
+  "description": "Cron trigger at 08:00 daily — calls POST /sequences/process to send due emails",
+  "nodes": [],
+  "note": "Implemented in Phase 4"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Follow-Up Executor",
+  "description": "Triggered after meeting slot passes — prompts Liam via Telegram for post-meeting voice feedback",
+  "nodes": [],
+  "note": "Implemented in Phase 5"
+}

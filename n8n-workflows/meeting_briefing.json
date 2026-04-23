@@ -1,0 +1,6 @@
+{
+  "name": "Meeting Briefing Trigger",
+  "description": "Cron trigger every 10 minutes — calls GET /meetings/upcoming-briefings and sends Telegram briefings",
+  "nodes": [],
+  "note": "Implemented in Phase 5"
+}
