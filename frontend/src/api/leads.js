@@ -11,3 +11,9 @@ export const approveLead = (id) =>
 
 export const rejectLead = (id) =>
   updateLead(id, { pipeline_stage: 'closed_lost' })
+
+export const enrichLead = (id) =>
+  apiFetch(`/leads/${id}/enrich`, { method: 'POST' })
+
+export const generateOutreach = (id) =>
+  apiFetch(`/leads/${id}/generate-outreach`, { method: 'POST' })

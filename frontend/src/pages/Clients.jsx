@@ -7,7 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function Clients() {
   const { data: leads = [], isLoading } = useAllLeads()
   const updateLead = useUpdateLead()
-  const [selected, setSelected] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
+  const selected = leads.find(l => l.id === selectedId) ?? null
 
   if (isLoading) return (
     <div className="flex gap-3">
@@ -25,9 +26,9 @@ export default function Clients() {
       <KanbanBoard
         leads={leads}
         onStageChange={(id, newStage) => updateLead.mutate({ id, data: { pipeline_stage: newStage } })}
-        onCardClick={setSelected}
+        onCardClick={(lead) => setSelectedId(lead.id)}
       />
-      <LeadDetailSheet lead={selected} onClose={() => setSelected(null)} />
+      <LeadDetailSheet lead={selected} onClose={() => setSelectedId(null)} />
     </>
   )
 }

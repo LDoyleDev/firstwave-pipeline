@@ -72,6 +72,17 @@ def enrich_lead_endpoint(lead_id: str) -> dict:
     return {"lead_id": lead_id, "enrichment": enrichment}
 
 
+@router.post("/{lead_id}/generate-outreach")
+def generate_outreach_endpoint(lead_id: str) -> dict:
+    """Generate email drafts for a single client lead."""
+    from backend.agents.outreach import generate_client_outreach
+    result = supabase.table("leads").select("id").eq("id", lead_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    draft = generate_client_outreach(lead_id)
+    return {"lead_id": lead_id, "draft": draft}
+
+
 @router.post("/enrich-batch")
 def enrich_batch_endpoint(lead_ids: list[str]) -> list:
     """Trigger enrichment for up to 5 leads (sequential, rate-limit safe)."""

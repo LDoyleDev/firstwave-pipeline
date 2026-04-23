@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { updateLead, approveLead, rejectLead } from '@/api/leads'
+import { updateLead, approveLead, rejectLead, enrichLead, generateOutreach } from '@/api/leads'
 
 export function useLeads(stage) {
   return useQuery({
@@ -40,6 +40,22 @@ export function useRejectLead() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id) => rejectLead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
+  })
+}
+
+export function useEnrichLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => enrichLead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
+  })
+}
+
+export function useGenerateOutreach() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => generateOutreach(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
   })
 }
