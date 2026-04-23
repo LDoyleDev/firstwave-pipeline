@@ -2,6 +2,48 @@
 
 ---
 
+## 2026-04-23 — Phase 7: Seed Data + Final Polish
+
+### Built
+- `scripts/update_investor_contacts.py` — populated all 50 investor_targets records with:
+  - `contact_name`: specific partner names for all 50 firms (e.g. Reshma Sohoni / Seedcamp, Brendan Wallace / Fifth Wall, Charles Hudson / Precursor)
+  - `check_size_range`: typical check size for each fund
+  - `warm_path`: personalised warm-path notes for all Tier 1, Tier 5, and key Tier 6 angels (20 total) describing how Liam's Selina/A&O background + Berlin location connects to each fund's thesis
+- `README.md` — full operator documentation:
+  - How to start backend + frontend (single commands)
+  - Daily workflow description (morning review → meeting window → discovery)
+  - All voice commands with examples
+  - How to add leads manually (API + discovery run)
+  - How to approve outreach (browser + API + auto-mode at 20 approvals)
+  - Pipeline status check commands
+  - n8n workflow import table
+  - Troubleshooting guide (5 common failure modes with fix commands)
+  - Full environment variables reference
+- Verified Tailscale access: http://100.113.88.92:5173 (frontend bound to 0.0.0.0 in vite.config.js)
+- Verified FastAPI binds to 0.0.0.0 (pass `--host 0.0.0.0` to uvicorn)
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `pytest backend/tests/ -v` | 46/46 passed ✓ |
+| Backend imports | ✓ |
+| DB connection | ✓ |
+| Investor contacts populated | 50/50 ✓ |
+| warm_path coverage | 20/50 (all Tier 1 + Tier 5 + key Tier 6) ✓ |
+| Tailscale IP | 100.113.88.92 ✓ |
+| Frontend build | ✓ clean (984KB) |
+
+### All phases complete
+- Phase 1: Foundation (schema, API, routers)
+- Phase 2: AI Agents (enrichment, outreach, intent parser, followup, briefing)
+- Phase 3: Integrations (Gmail, Calendar, Telegram, Groq, Cal.com, Apollo, PhantomBuster)
+- Phase 4: Outreach Engine (discovery, review queue, sequence executor, reply detection, n8n)
+- Phase 5: Scheduling + Meeting Flow (booking, briefings, post-meeting feedback loop)
+- Phase 6: Frontend Dashboard (React, 7 pages, Kanban, dark theme)
+- Phase 7: Seed Data + Polish (investor contacts, warm paths, README)
+
+---
+
 ## 2026-04-23 — Phase 5: Scheduling + Meeting Flow
 
 ### Built

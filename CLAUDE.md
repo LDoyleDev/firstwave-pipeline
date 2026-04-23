@@ -43,7 +43,7 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 - Tailscale: http://100.113.88.92:5173
 
 ## Current phase
-CURRENT PHASE: 7 — Seed Data + Final Polish
+CURRENT PHASE: COMPLETE — all 7 phases shipped
 (Update this line at the start of each new phase session)
 
 ## Session end checklist — run this at the end of EVERY session
