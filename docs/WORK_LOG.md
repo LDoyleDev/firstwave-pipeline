@@ -2,6 +2,48 @@
 
 ---
 
+## 2026-04-23 — Phase 6: Frontend Dashboard
+
+### Built
+- Full React + Vite frontend with 7 pages: Dashboard, Clients (Kanban), Investors (Table), Review Queue, Meetings (Week view), Analytics (Charts), Voice Log
+- Tailwind CSS v3 dark theme: navy (#0f1117) / charcoal (#1a1d2e) / electric blue (#2563eb) palette matching Bloomberg Terminal spec
+- shadcn-style UI primitives: Card, Badge, Button, Input, Sheet (slide-over), Dialog, Skeleton
+- Data layer: Supabase JS client for reads (works everywhere); FastAPI calls for writes (dev only)
+- Real-time updates via Supabase Realtime subscriptions (auto-invalidates React Query cache)
+- `PasswordGate.jsx` — password protects entire app; auto-bypasses on localhost and Tailscale IPs
+- `AppShell` with persistent sidebar (active state, review queue badge count), live Berlin clock in topbar
+- `MeetingSlotsPanel` — hero component showing today's 3 slots (booked/available/past + outcome badges)
+- KPI cards: Review Queue, Active in Sequence, Replies This Week, Meetings This Week
+- `PipelineHealthBar` — clickable stage-count bars for both tracks
+- `ActivityFeed` — last 10 events merged from leads/investors/meetings, 30s refresh
+- `KanbanBoard` — full @dnd-kit drag-and-drop across 11 client stages; PATCH on drop
+- `LeadDetailSheet` / `InvestorDetailSheet` — slide-over profile panels
+- `InvestorTable` — grouped by tier with TierGroup collapsible sections, liam_leads indicator
+- `ReviewCard` — inline approve/reject/edit (read-only mode warning in production)
+- `WeekView` — 7-column calendar grid for the 10:30–11:30 meeting block
+- 4 Recharts charts: ConversionFunnel, ReplyRateChart (weekly trend), InvestorTierCoverage (stacked bars), MeetingOutcomesChart (donut)
+- `frontend/vercel.json` — ready for Vercel deployment (SPA rewrites configured)
+- `frontend/.env` — Supabase anon key pre-filled; access password `firstwave2026`
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `npm run build` | ✓ clean (984KB bundle) |
+| All 7 routes HTTP 200 | ✓ |
+| Backend imports | ✓ |
+| DB connection | ✓ |
+
+### Known issues / notes
+- inotify watcher limit on this machine — use `CHOKIDAR_USEPOLLING=1 npm run dev` (documented in CLAUDE.md)
+- Bundle is 984KB (Recharts adds ~400KB) — not an issue for a private operator tool; could code-split later
+- Supabase RLS policies for anon read access must be applied before Vercel deployment (SQL in plan file)
+- `frontend/.env` is gitignored — copy values to Vercel environment variables before deploying
+
+### Next
+Phase 2 — AI Agents (enrichment, outreach generation, intent parser, follow-up, briefing)
+
+---
+
 ## 2026-04-23 — Phase 1: Foundation
 
 ### Built

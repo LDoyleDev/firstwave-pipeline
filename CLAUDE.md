@@ -36,6 +36,12 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 - /cost — check token usage
 - /model opusplan — use for complex architecture decisions
 
+## Frontend
+- Start: `cd frontend && CHOKIDAR_USEPOLLING=1 npm run dev` (polling required on this machine — inotify limit)
+- Build check: `cd frontend && npm run build`
+- Access: http://localhost:5173 · password: see frontend/.env (VITE_ACCESS_PASSWORD)
+- Tailscale: http://100.113.88.92:5173
+
 ## Current phase
 CURRENT PHASE: 2 — AI Agents
 (Update this line at the start of each new phase session)
