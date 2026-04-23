@@ -102,6 +102,41 @@ export function LeadDetailSheet({ lead, onClose }) {
           </div>
         )}
 
+        {lead.enrichment_data?.recommended_opener && (
+          <div className="bg-emerald-900/30 border border-emerald-700/40 rounded p-3">
+            <div className="text-xs text-emerald-400 uppercase tracking-wider mb-1">Recommended Opener</div>
+            <div className="text-sm text-gray-200 italic">"{lead.enrichment_data.recommended_opener}"</div>
+          </div>
+        )}
+
+        {lead.enrichment_data?.company_context && (
+          <div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Context</div>
+            <div className="text-sm text-gray-300">{lead.enrichment_data.company_context}</div>
+          </div>
+        )}
+
+        {lead.enrichment_data?.recent_news && (
+          <div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Recent News</div>
+            <div className="text-sm text-gray-300">{lead.enrichment_data.recent_news}</div>
+          </div>
+        )}
+
+        {lead.enrichment_data?.mutual_connections_or_events && (
+          <div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connections / Events</div>
+            <div className="text-sm text-gray-300">{lead.enrichment_data.mutual_connections_or_events}</div>
+          </div>
+        )}
+
+        {lead.enrichment_data?.notes && (
+          <div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Enrichment Notes</div>
+            <div className="text-sm text-gray-300">{lead.enrichment_data.notes}</div>
+          </div>
+        )}
+
         <EmailDraft label="Email 1 Draft" raw={lead.outreach_email_1} />
         {lead.outreach_email_2 && <EmailDraft label="Email 2 Draft" raw={lead.outreach_email_2} />}
 
