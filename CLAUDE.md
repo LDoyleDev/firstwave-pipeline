@@ -37,5 +37,32 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 - /model opusplan — use for complex architecture decisions
 
 ## Current phase
-CURRENT PHASE: 1 — Foundation
+CURRENT PHASE: 2 — AI Agents
 (Update this line at the start of each new phase session)
+
+## Session end checklist — run this at the end of EVERY session
+Do these steps in order before finishing:
+
+1. **Failure check** — run both:
+   ```
+   PYTHONPATH=. venv/bin/python3 -c "from backend.main import app; print('imports ok')"
+   PYTHONPATH=. venv/bin/python3 -c "from backend.integrations.supabase_client import test_connection; print('db:', test_connection())"
+   ```
+
+2. **Update docs/WORK_LOG.md** — append an entry with:
+   - Date (use today's date from system)
+   - Phase number and name
+   - Bullet list of what was built/changed this session
+   - Any known issues or blockers
+
+3. **Update CLAUDE.md** — change the CURRENT PHASE line to the next phase if the current one is complete
+
+4. **Commit and push**:
+   ```
+   git add -A
+   git status   ← review what's being committed, exclude .env and venv/
+   git commit -m "Phase X: <short description>"
+   git push origin main
+   ```
+
+Never commit: .env, venv/, __pycache__, *.pyc, credentials.json (all in .gitignore)
