@@ -9,8 +9,15 @@ logger = logging.getLogger(__name__)
 
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY", "")
 BASE_URL = "https://api.apollo.io/v1"
-_HEADERS = {"Content-Type": "application/json", "Cache-Control": "no-cache"}
 _RATE_LIMIT_DELAY = 2.0  # seconds between requests — Apollo free tier rate limit
+
+
+def _headers() -> dict:
+    return {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "X-Api-Key": APOLLO_API_KEY,
+    }
 
 
 def find_person_email(
@@ -32,9 +39,8 @@ def find_person_email(
 
     response = httpx.post(
         f"{BASE_URL}/people/match",
-        headers=_HEADERS,
+        headers=_headers(),
         json={
-            "api_key": APOLLO_API_KEY,
             "first_name": first_name,
             "last_name": last_name,
             "domain": company_domain,
@@ -83,10 +89,9 @@ def search_leads(
             time.sleep(_RATE_LIMIT_DELAY)
 
         response = httpx.post(
-            f"{BASE_URL}/mixed_people/search",
-            headers=_HEADERS,
+            f"{BASE_URL}/mixed_people/api_search",
+            headers=_headers(),
             json={
-                "api_key": APOLLO_API_KEY,
                 "page": page,
                 "per_page": 25,
                 "person_titles": job_titles,

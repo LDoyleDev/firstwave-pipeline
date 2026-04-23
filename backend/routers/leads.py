@@ -31,11 +31,16 @@ class LeadUpdate(BaseModel):
 
 
 @router.get("")
-def list_leads(pipeline_stage: Optional[str] = None) -> list:
-    """List all leads with optional pipeline_stage filter."""
-    query = supabase.table("leads").select("*").order("created_at", desc=True)
+def list_leads(
+    pipeline_stage: Optional[str] = None,
+    chatbot_detected: Optional[bool] = None,
+) -> list:
+    """List all leads with optional pipeline_stage and chatbot_detected filters."""
+    query = supabase.table("leads").select("*").order("chatbot_detected", desc=False).order("lead_score", desc=True)
     if pipeline_stage:
         query = query.eq("pipeline_stage", pipeline_stage)
+    if chatbot_detected is not None:
+        query = query.eq("chatbot_detected", chatbot_detected)
     result = query.execute()
     return result.data
 

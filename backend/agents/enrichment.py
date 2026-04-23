@@ -1,6 +1,7 @@
 import json
 import logging
 from backend.integrations.supabase_client import supabase
+from backend.integrations.website_checker import check_for_chatbot
 from backend.utils.anthropic_client import generate
 from backend.prompts.system_prompts import ENRICHMENT_SYSTEM_PROMPT
 
@@ -18,6 +19,15 @@ def enrich_lead(lead_data: dict) -> dict:
         Enrichment result dict (also stored in lead record).
     """
     lead_id = lead_data.get("id")
+
+    # Check for existing chatbot before investing enrichment tokens.
+    # Leads with chatbots already get a 20-point score penalty — they're still
+    # worth contacting but are lower priority than greenfield opportunities.
+    website = lead_data.get("company_website", "")
+    chatbot_detected = check_for_chatbot(website) if website else False
+    if chatbot_detected:
+        logger.info("Chatbot detected on %s — lead %s will receive score penalty", website, lead_id)
+
     user_message = (
         f"Enrich this lead:\n"
         f"Name: {lead_data.get('first_name', '')} {lead_data.get('last_name', '')}\n"
@@ -49,16 +59,29 @@ def enrich_lead(lead_data: dict) -> dict:
             }
 
     if lead_id:
+        raw_score = enrichment.get("lead_score", 0)
+        # Apply 20-point penalty for leads whose hotel already has a chatbot
+        final_score = max(0, raw_score - 20) if chatbot_detected else raw_score
+
+        enrichment["chatbot_detected"] = chatbot_detected
+        enrichment["lead_score"] = final_score
+
         update_payload = {
             "enrichment_data": enrichment,
-            "lead_score": enrichment.get("lead_score", 0),
+            "lead_score": final_score,
             "warmth": enrichment.get("warmth", "cold"),
             "pain_signals": enrichment.get("pain_signals", []),
             "personalisation_hooks": enrichment.get("personalisation_hooks", []),
+            "chatbot_detected": chatbot_detected,
             "pipeline_stage": "enriched",
         }
         supabase.table("leads").update(update_payload).eq("id", lead_id).execute()
-        logger.info("Lead %s enriched — score %s, warmth %s", lead_id, enrichment.get("lead_score"), enrichment.get("warmth"))
+        logger.info(
+            "Lead %s enriched — score %s%s, warmth %s",
+            lead_id, final_score,
+            " (chatbot penalty applied)" if chatbot_detected else "",
+            enrichment.get("warmth"),
+        )
 
     return enrichment
 

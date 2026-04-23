@@ -31,9 +31,10 @@ def _send_telegram(text: str) -> None:
 @router.get("/review-queue")
 def get_review_queue() -> dict:
     """Return all leads and investors awaiting outreach approval, ordered by lead_score desc."""
+    # Order: chatbot_detected=false first (greenfield opportunities), then by lead_score desc
     client_result = supabase.table("leads").select("*").eq(
         "outreach_approved", False
-    ).neq("pipeline_stage", "closed_lost").order("lead_score", desc=True).execute()
+    ).neq("pipeline_stage", "closed_lost").order("chatbot_detected", desc=False).order("lead_score", desc=True).execute()
 
     investor_result = supabase.table("investor_targets").select("*").eq(
         "outreach_approved", False
