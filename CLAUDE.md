@@ -60,8 +60,10 @@ Do these steps in order before finishing:
 4. **Commit and push**:
    ```
    git add -A
-   git status   ← review what's being committed, exclude .env and venv/
-   git commit -m "Phase X: <short description>"
+   git status   ← review what's being committed; exclude .env and venv/
+   git commit -m "Phase X: <one-line summary>
+
+   - bullet list of what changed"
    git push origin main
    ```
 
