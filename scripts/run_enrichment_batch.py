@@ -39,7 +39,7 @@ def _fetch_batch(batch_size: int) -> list[dict]:
 def run_batch(
     batch_size: int = MAX_BATCH_SIZE,
     generate_outreach: bool = False,
-    sleep_between_leads: float = 1.0,
+    sleep_between_leads: float = 45.0,
 ) -> dict:
     from backend.agents.enrichment import enrich_lead
     from backend.agents.outreach import generate_client_outreach
@@ -83,6 +83,7 @@ def main() -> None:
     parser.add_argument("--generate-outreach", action="store_true", help="Also generate outreach drafts after enrichment.")
     parser.add_argument("--loop", action="store_true", help="Keep running until queue is empty.")
     parser.add_argument("--sleep-between-batches", type=int, default=60, help="Seconds to sleep between batches (default 60).")
+    parser.add_argument("--sleep-between-leads", type=float, default=45.0, help="Seconds between each lead (default 45 — respects Max OAuth rate limits).")
     args = parser.parse_args()
 
     batch_size = min(args.batch_size, MAX_BATCH_SIZE)
@@ -97,6 +98,7 @@ def main() -> None:
         result = run_batch(
             batch_size=batch_size,
             generate_outreach=args.generate_outreach,
+            sleep_between_leads=args.sleep_between_leads,
         )
 
         total_processed += result["processed"]
