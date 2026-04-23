@@ -14,3 +14,4 @@ pydantic
 python-multipart
 pytest
 pytest-asyncio
+duckduckgo-search

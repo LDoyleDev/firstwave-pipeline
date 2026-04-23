@@ -116,6 +116,44 @@ export function LeadDetailSheet({ lead, onClose }) {
           </div>
         )}
 
+        {lead.enrichment_data?.apollo_profile?.employment_history?.length > 0 && (
+          <div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Career History</div>
+            <div className="space-y-1">
+              {lead.enrichment_data.apollo_profile.employment_history.map((job, i) => (
+                <div key={i} className="flex gap-2 text-xs">
+                  <span className="text-gray-500 font-data shrink-0">
+                    {job.start}–{job.current ? 'now' : job.end}
+                  </span>
+                  <span className="text-gray-300">
+                    {job.title} <span className="text-gray-500">at {job.company}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {lead.enrichment_data?.apollo_profile?.company_profile?.description && (
+          <div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Profile</div>
+            <div className="text-sm text-gray-300 mb-1">
+              {lead.enrichment_data.apollo_profile.company_profile.description}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+              {lead.enrichment_data.apollo_profile.company_profile.employees && (
+                <span>{lead.enrichment_data.apollo_profile.company_profile.employees} employees</span>
+              )}
+              {lead.enrichment_data.apollo_profile.company_profile.num_locations && (
+                <span>{lead.enrichment_data.apollo_profile.company_profile.num_locations} locations</span>
+              )}
+              {lead.enrichment_data.apollo_profile.company_profile.annual_revenue && (
+                <span>{lead.enrichment_data.apollo_profile.company_profile.annual_revenue}</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {lead.enrichment_data?.recent_news && (
           <div>
             <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Recent News</div>
