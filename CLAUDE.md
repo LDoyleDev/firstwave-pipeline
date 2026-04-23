@@ -43,7 +43,7 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 - Tailscale: http://100.113.88.92:5173
 
 ## Current phase
-CURRENT PHASE: 4 — Outreach Engine
+CURRENT PHASE: 5 — Scheduling + Meeting Flow
 (Update this line at the start of each new phase session)
 
 ## Session end checklist — run this at the end of EVERY session

@@ -1,9 +1,9 @@
 {
-  "name": "Sequence Scheduler",
+  "name": "PhantomBuster Daily Launcher",
   "nodes": [
     {
-      "id": "cron-daily-08",
-      "name": "Daily 08:00 Trigger",
+      "id": "cron-daily-06",
+      "name": "Daily 06:00 Trigger",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [240, 300],
@@ -12,7 +12,7 @@
           "item": [
             {
               "mode": "everyDay",
-              "hour": 8,
+              "hour": 6,
               "minute": 0
             }
           ]
@@ -20,26 +20,26 @@
       }
     },
     {
-      "id": "http-process-sequences",
-      "name": "POST /sequences/process",
+      "id": "http-launch-phantom",
+      "name": "POST /discovery/phantombuster-launch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [460, 300],
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:8000/sequences/process",
+        "url": "http://localhost:8000/discovery/phantombuster-launch",
         "options": {
-          "timeout": 60000
+          "timeout": 30000
         }
       }
     }
   ],
   "connections": {
-    "Daily 08:00 Trigger": {
+    "Daily 06:00 Trigger": {
       "main": [
         [
           {
-            "node": "POST /sequences/process",
+            "node": "POST /discovery/phantombuster-launch",
             "type": "main",
             "index": 0
           }
@@ -48,5 +48,5 @@
     }
   },
   "active": true,
-  "description": "Runs daily at 08:00 Berlin time. Sends all email sequence steps that are due."
+  "description": "Runs daily at 06:00. Launches PhantomBuster LinkedIn scraper before Liam starts work, preserving the 10 min/day free quota."
 }

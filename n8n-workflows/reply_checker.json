@@ -1,9 +1,9 @@
 {
-  "name": "Sequence Scheduler",
+  "name": "Reply Checker",
   "nodes": [
     {
-      "id": "cron-daily-08",
-      "name": "Daily 08:00 Trigger",
+      "id": "cron-every-2h",
+      "name": "Every 2 Hours Trigger",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [240, 300],
@@ -11,23 +11,23 @@
         "triggerTimes": {
           "item": [
             {
-              "mode": "everyDay",
-              "hour": 8,
-              "minute": 0
+              "mode": "everyX",
+              "value": 2,
+              "unit": "hours"
             }
           ]
         }
       }
     },
     {
-      "id": "http-process-sequences",
-      "name": "POST /sequences/process",
+      "id": "http-check-replies",
+      "name": "POST /sequences/check-replies",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [460, 300],
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:8000/sequences/process",
+        "url": "http://localhost:8000/sequences/check-replies",
         "options": {
           "timeout": 60000
         }
@@ -35,11 +35,11 @@
     }
   ],
   "connections": {
-    "Daily 08:00 Trigger": {
+    "Every 2 Hours Trigger": {
       "main": [
         [
           {
-            "node": "POST /sequences/process",
+            "node": "POST /sequences/check-replies",
             "type": "main",
             "index": 0
           }
@@ -48,5 +48,5 @@
     }
   },
   "active": true,
-  "description": "Runs daily at 08:00 Berlin time. Sends all email sequence steps that are due."
+  "description": "Runs every 2 hours. Checks Gmail for replies to active sequences and updates pipeline stages."
 }

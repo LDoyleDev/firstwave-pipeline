@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-04-23 — Phase 4: Outreach Engine
+
+### Built
+- `backend/agents/sequence_executor.py` — `schedule_sequence(entity_id, track)`: creates 3 email steps (Day 0, 7, 14) + 1 LinkedIn touch (Day 3) as Telegram notification; `process_due_sequences()`: queries pending sequences due now, sends via Gmail, updates records, marks replied entities as skipped; `check_all_replies()`: checks Gmail for replies, flips stage to 'replied', pauses remaining steps, sends Telegram alert
+- `backend/routers/sequences.py` (full implementation) — `GET /review-queue`: split client/investor, ordered by lead_score/tier; `POST /review-queue/{id}/approve`: sets outreach_approved, increments system_config counter, flips to auto mode at 20 approvals, schedules sequence; `POST /review-queue/{id}/reject`: closes as closed_lost/pass; `POST /review-queue/{id}/edit`: inline draft edit without approving; `POST /sequences/process`: runs process_due_sequences(); `POST /sequences/check-replies`: runs check_all_replies(); `GET /sequences`: list with filters
+- `backend/routers/discovery.py` — `POST /discovery/run`: supports apollo/phantombuster/manual sources, deduplicates by linkedin_url+email, creates leads, triggers enrichment+outreach, sends Telegram notification; `POST /discovery/phantombuster-launch`: launches daily PhantomBuster scraper (called by n8n at 06:00)
+- `backend/main.py` — registered discovery router; sequences router now uses no prefix (owns /review-queue/* and /sequences/*)
+- `n8n-workflows/sequence_scheduler.json` — full n8n workflow: cron at 08:00 daily → POST /sequences/process
+- `n8n-workflows/reply_checker.json` — full n8n workflow: cron every 2h → POST /sequences/check-replies
+- `n8n-workflows/phantombuster_launcher.json` — full n8n workflow: cron at 06:00 daily → POST /discovery/phantombuster-launch
+- `backend/tests/test_phase4.py` — 10 tests covering review queue CRUD, sequence processing, discovery endpoint, sequence_executor unit tests
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `pytest backend/tests/ -v` | 36/36 passed ✓ (26 existing + 10 Phase 4) |
+| Backend imports | ✓ |
+| DB connection | ✓ |
+
+### Known issues / notes
+- `PHANTOMBUSTER_DEFAULT_SEARCH_URL` must be set in `.env` before `POST /discovery/phantombuster-launch` will work
+- Gmail send in `process_due_sequences()` requires valid Google OAuth credentials in `.env` (GOOGLE_REFRESH_TOKEN etc.)
+- Investor discovery only supports 'manual' source — investor list is pre-seeded; Apollo/PhantomBuster reserved for client track
+- n8n workflows use `localhost:8000` — ensure FastAPI is running before activating workflows
+
+### Next
+Phase 5 — Scheduling + Meeting Flow (meeting booking via voice, pre-meeting briefing trigger, post-meeting feedback loop)
+
+---
+
 ## 2026-04-23 — Phase 3: Integrations
 
 ### Built
