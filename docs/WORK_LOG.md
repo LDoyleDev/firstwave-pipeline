@@ -2,6 +2,35 @@
 
 ---
 
+## 2026-04-23 — Phase 2: AI Agents
+
+### Built
+- `backend/utils/anthropic_client.py` — `generate()` (Sonnet) + `classify()` (Haiku), exponential backoff retry (max 3 attempts), handles RateLimitError / APIConnectionError / APIError
+- `backend/agents/enrichment.py` — `enrich_lead(lead_data)` + `enrich_batch(lead_ids, max=5)`: calls Sonnet with ENRICHMENT_SYSTEM_PROMPT, parses JSON, updates lead record in Supabase (enrichment_data, lead_score, warmth, pain_signals, personalisation_hooks, stage → 'enriched')
+- `backend/agents/outreach.py` — `generate_client_outreach(lead_id)`, `generate_investor_outreach(investor_id)`, `regenerate_with_feedback(entity_id, track, feedback)`: stores drafts, sets pipeline_stage to 'review_queue' / 'ready_to_contact'
+- `backend/agents/intent_parser.py` — `parse_voice_intent(transcript)` (Haiku), `route_intent(intent)` with 15 intent handlers; logs all commands to voice_commands table; always returns valid JSON (fallback to check_pipeline on parse error)
+- `backend/agents/followup.py` — `generate_followup(meeting_id, feedback_text)`: outcome classification (hot/warm/cold/dead), next_action with auto-calculated timing, follow_up_draft; updates meeting record + schedules step 3 email sequence
+- `backend/agents/briefing.py` — `generate_briefing(meeting_id)`: fetches lead/investor profile, generates Telegram-formatted briefing (<300 words), stores in meeting.briefing_content, marks briefing_sent=True
+- `backend/routers/leads.py` — Added `POST /leads/{id}/enrich` + `POST /leads/enrich-batch`
+- `backend/routers/meetings.py` — Added `POST /meetings/{id}/briefing` + `POST /meetings/{id}/feedback`
+- `backend/tests/test_agents.py` — 12 tests covering all 6 agents (mocked Anthropic + Supabase)
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `pytest backend/tests/test_agents.py -v` | 12/12 passed ✓ |
+| Backend imports | ✓ |
+
+### Known issues / notes
+- Agents require ANTHROPIC_API_KEY in .env (now set)
+- `pytest` added to venv (`pip install pytest`)
+- Intent router's complex actions (book_meeting, enrich_lead by name) return guidance messages directing to the correct REST endpoint — full automation wires in Phase 3/4/5
+
+### Next
+Phase 3 — Integrations (Groq Whisper, Telegram bot, Gmail, Google Calendar, Cal.com, Apollo, PhantomBuster)
+
+---
+
 ## 2026-04-23 — Phase 6: Frontend Dashboard
 
 ### Built

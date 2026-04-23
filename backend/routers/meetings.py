@@ -94,6 +94,32 @@ def create_meeting(meeting: MeetingCreate) -> dict:
     return result.data[0]
 
 
+@router.post("/{meeting_id}/briefing")
+def meeting_briefing(meeting_id: str) -> dict:
+    """Generate and store a pre-meeting briefing via the briefing agent."""
+    from backend.agents.briefing import generate_briefing
+    try:
+        briefing = generate_briefing(meeting_id)
+        return {"meeting_id": meeting_id, "briefing": briefing}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+class FeedbackInput(BaseModel):
+    feedback_text: str
+
+
+@router.post("/{meeting_id}/feedback")
+def meeting_feedback(meeting_id: str, body: FeedbackInput) -> dict:
+    """Record post-meeting feedback and generate follow-up via the followup agent."""
+    from backend.agents.followup import generate_followup
+    try:
+        result = generate_followup(meeting_id, body.feedback_text)
+        return {"meeting_id": meeting_id, **result}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.patch("/{meeting_id}")
 def update_meeting(meeting_id: str, update: MeetingUpdate) -> dict:
     """Update meeting status, outcome, or feedback."""

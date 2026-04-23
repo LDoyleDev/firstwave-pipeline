@@ -55,6 +55,24 @@ def create_lead(lead: LeadCreate) -> dict:
     return result.data[0]
 
 
+@router.post("/{lead_id}/enrich")
+def enrich_lead_endpoint(lead_id: str) -> dict:
+    """Trigger enrichment agent for a single lead."""
+    from backend.agents.enrichment import enrich_lead
+    result = supabase.table("leads").select("*").eq("id", lead_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    enrichment = enrich_lead(result.data)
+    return {"lead_id": lead_id, "enrichment": enrichment}
+
+
+@router.post("/enrich-batch")
+def enrich_batch_endpoint(lead_ids: list[str]) -> list:
+    """Trigger enrichment for up to 5 leads (sequential, rate-limit safe)."""
+    from backend.agents.enrichment import enrich_batch
+    return enrich_batch(lead_ids)
+
+
 @router.patch("/{lead_id}")
 def update_lead(lead_id: str, update: LeadUpdate) -> dict:
     """Update a lead's stage, score, or notes."""
