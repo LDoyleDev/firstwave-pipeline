@@ -89,6 +89,10 @@ def route_intent(intent: dict) -> dict:
         "pause_sequence": _handle_pause_sequence,
         "edit_outreach": _handle_edit_outreach,
         "cancel_meeting": _handle_cancel_meeting,
+        "confirm_send_reply": _handle_confirm_send_reply,
+        "edit_reply": _handle_edit_reply,
+        "intro_via_contact": _handle_intro_via_contact,
+        "send_cold": _handle_send_cold_investor,
     }
 
     handler = handlers.get(intent_name)
@@ -441,3 +445,139 @@ def _handle_edit_outreach(params: dict, track: str) -> dict:
 
 def _handle_cancel_meeting(params: dict, track: str) -> dict:
     return {"success": True, "message": "Use DELETE /meetings/{id} to cancel a meeting.", "data": params}
+
+
+def _handle_confirm_send_reply(params: dict, track: str) -> dict:
+    """Send the pending reply draft for the most recently replied lead."""
+    import httpx as _httpx
+
+    # Find the most recent lead in 'replied' stage with a pending draft
+    leads = (
+        supabase.table("leads")
+        .select("id, first_name, last_name, company, pending_reply_draft")
+        .eq("pipeline_stage", "replied")
+        .not_.is_("pending_reply_draft", "null")
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute()
+        .data or []
+    )
+    if not leads:
+        return {"success": False, "message": "No pending reply draft found.", "data": None}
+
+    lead = leads[0]
+    lead_id = lead["id"]
+    name = f"{lead.get('first_name', '')} {lead.get('last_name', '')}".strip()
+
+    try:
+        from backend.integrations import gmail_client as _gmail
+        seq_rows = (
+            supabase.table("email_sequences")
+            .select("gmail_message_id, subject")
+            .eq("lead_id", lead_id)
+            .eq("status", "sent")
+            .order("sent_at", desc=True)
+            .limit(1)
+            .execute()
+            .data
+        )
+        reply_to_id = seq_rows[0].get("gmail_message_id") if seq_rows else None
+        subject = seq_rows[0].get("subject", "") if seq_rows else ""
+        if subject and not subject.startswith("Re:"):
+            subject = f"Re: {subject}"
+
+        lead_full = supabase.table("leads").select("email").eq("id", lead_id).single().execute().data or {}
+        _gmail.send_email(
+            to=lead_full.get("email", ""),
+            subject=subject or "Re: Following up",
+            body=lead["pending_reply_draft"],
+            reply_to_message_id=reply_to_id,
+        )
+        supabase.table("leads").update({"pending_reply_draft": None}).eq("id", lead_id).execute()
+    except Exception as e:
+        return {"success": False, "message": f"Send failed: {e}", "data": None}
+
+    return {"success": True, "message": f"Reply sent to {name}.", "data": {"lead_id": lead_id}}
+
+
+def _handle_intro_via_contact(params: dict, track: str) -> dict:
+    """Record warm intro path for the pending Tier 1 investor and proceed with sequence."""
+    from backend.agents.sequence_executor import schedule_sequence
+
+    intro_name = params.get("contact_name") or params.get("lead_name") or params.get("feedback_text", "")
+
+    investors = (
+        supabase.table("investor_targets")
+        .select("id, firm_name, contact_name")
+        .eq("pending_intro_check", True)
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute()
+        .data or []
+    )
+    if not investors:
+        return {"success": False, "message": "No pending intro check found.", "data": None}
+
+    inv = investors[0]
+    supabase.table("investor_targets").update({
+        "pending_intro_check": False,
+        "warm_path": f"Intro via {intro_name}" if intro_name else "Warm intro (contact not specified)",
+    }).eq("id", inv["id"]).execute()
+
+    try:
+        schedule_sequence(inv["id"], "investor")
+    except Exception as e:
+        return {"success": False, "message": f"Sequence scheduling failed: {e}", "data": None}
+
+    firm = inv.get("firm_name", "")
+    msg = f"Got it — intro via {intro_name}. Sequence for {firm} scheduled."
+    return {"success": True, "message": msg, "data": {"investor_id": inv["id"]}}
+
+
+def _handle_send_cold_investor(params: dict, track: str) -> dict:
+    """Proceed with cold outreach for a pending Tier 1 investor (no warm intro)."""
+    from backend.agents.sequence_executor import schedule_sequence
+
+    investors = (
+        supabase.table("investor_targets")
+        .select("id, firm_name")
+        .eq("pending_intro_check", True)
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute()
+        .data or []
+    )
+    if not investors:
+        return {"success": False, "message": "No pending intro check found.", "data": None}
+
+    inv = investors[0]
+    supabase.table("investor_targets").update({"pending_intro_check": False}).eq("id", inv["id"]).execute()
+
+    try:
+        schedule_sequence(inv["id"], "investor")
+    except Exception as e:
+        return {"success": False, "message": f"Sequence scheduling failed: {e}", "data": None}
+
+    firm = inv.get("firm_name", "")
+    return {"success": True, "message": f"Cold outreach sequence for {firm} scheduled.", "data": {"investor_id": inv["id"]}}
+
+
+def _handle_edit_reply(params: dict, track: str) -> dict:
+    """Direct operator to the dashboard to revise the reply draft."""
+    leads = (
+        supabase.table("leads")
+        .select("id, first_name, last_name")
+        .eq("pipeline_stage", "replied")
+        .not_.is_("pending_reply_draft", "null")
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute()
+        .data or []
+    )
+    if not leads:
+        return {"success": False, "message": "No pending reply draft found.", "data": None}
+
+    lead = leads[0]
+    name = f"{lead.get('first_name', '')} {lead.get('last_name', '')}".strip()
+    msg = f"Open the dashboard to revise the reply draft for {name}: http://localhost:5173/clients"
+    return {"success": True, "message": msg, "data": {"lead_id": lead["id"]}}

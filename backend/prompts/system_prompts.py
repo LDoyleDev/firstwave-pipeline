@@ -135,6 +135,10 @@ AVAILABLE INTENTS:
 - pause_sequence: pause outreach sequence for a lead
 - find_investor: look up an investor target
 - next_actions: what should I do next
+- confirm_send_reply: send the pending reply draft (triggered by "yes", "send it", "send reply")
+- edit_reply: open dashboard to revise the reply draft (triggered by "edit", "change it", "revise")
+- intro_via_contact: record a warm intro path for investor (triggered by "intro via [name]")
+- send_cold: proceed with cold investor outreach (triggered by "send cold", "no intro", "go cold")
 
 OUTPUT FORMAT (always return valid JSON):
 {

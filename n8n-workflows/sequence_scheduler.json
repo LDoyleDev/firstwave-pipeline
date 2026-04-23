@@ -2,19 +2,15 @@
   "name": "Sequence Scheduler",
   "nodes": [
     {
-      "id": "cron-daily-08",
-      "name": "Daily 08:00 Trigger",
+      "id": "cron-hourly-business",
+      "name": "Hourly 09:00–17:00 Mon–Fri",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [240, 300],
       "parameters": {
         "triggerTimes": {
           "item": [
-            {
-              "mode": "everyDay",
-              "hour": 8,
-              "minute": 0
-            }
+            { "mode": "custom", "cronExpression": "0 9-17 * * 1-5" }
           ]
         }
       }
@@ -28,14 +24,12 @@
       "parameters": {
         "method": "POST",
         "url": "http://localhost:8000/sequences/process",
-        "options": {
-          "timeout": 60000
-        }
+        "options": { "timeout": 60000 }
       }
     }
   ],
   "connections": {
-    "Daily 08:00 Trigger": {
+    "Hourly 09:00–17:00 Mon–Fri": {
       "main": [
         [
           {
@@ -48,5 +42,5 @@
     }
   },
   "active": true,
-  "description": "Runs daily at 08:00 Berlin time. Sends all email sequence steps that are due."
+  "description": "Runs every hour 09:00–17:00 Mon–Fri Berlin time. Emails spread across the send window rather than all firing at 08:00."
 }

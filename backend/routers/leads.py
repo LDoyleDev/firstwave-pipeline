@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.integrations.supabase_client import supabase
+from backend.integrations import gmail_client
 
 router = APIRouter()
 
@@ -71,6 +72,91 @@ def enrich_batch_endpoint(lead_ids: list[str]) -> list:
     """Trigger enrichment for up to 5 leads (sequential, rate-limit safe)."""
     from backend.agents.enrichment import enrich_batch
     return enrich_batch(lead_ids)
+
+
+class RegenerateReplyRequest(BaseModel):
+    feedback: str
+
+
+@router.post("/{lead_id}/send-reply")
+def send_reply(lead_id: str) -> dict:
+    """Send the pending reply draft for a lead, threaded to the original conversation."""
+    lead = (
+        supabase.table("leads")
+        .select("email, pending_reply_draft, first_name, last_name")
+        .eq("id", lead_id)
+        .single()
+        .execute()
+        .data
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    draft = lead.get("pending_reply_draft", "")
+    if not draft:
+        raise HTTPException(status_code=400, detail="No pending reply draft for this lead")
+
+    # Thread against the most recent sent sequence
+    seq_rows = (
+        supabase.table("email_sequences")
+        .select("gmail_message_id, subject")
+        .eq("lead_id", lead_id)
+        .eq("status", "sent")
+        .order("sent_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    reply_to_id = seq_rows[0].get("gmail_message_id") if seq_rows else None
+    subject = seq_rows[0].get("subject", "") if seq_rows else ""
+    if subject and not subject.startswith("Re:"):
+        subject = f"Re: {subject}"
+
+    gmail_id = gmail_client.send_email(
+        to=lead["email"],
+        subject=subject or "Re: Following up",
+        body=draft,
+        reply_to_message_id=reply_to_id,
+    )
+
+    supabase.table("leads").update({"pending_reply_draft": None}).eq("id", lead_id).execute()
+    return {"sent": True, "gmail_id": gmail_id}
+
+
+@router.post("/{lead_id}/regenerate-reply")
+def regenerate_reply(lead_id: str, body: RegenerateReplyRequest) -> dict:
+    """Re-generate the pending reply draft with operator feedback."""
+    lead = supabase.table("leads").select("*").eq("id", lead_id).single().execute().data
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    seq_rows = (
+        supabase.table("email_sequences")
+        .select("reply_snippet, subject")
+        .eq("lead_id", lead_id)
+        .not_.is_("reply_snippet", "null")
+        .order("sent_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not seq_rows:
+        raise HTTPException(status_code=400, detail="No reply snippet found for this lead")
+
+    reply_snippet = seq_rows[0].get("reply_snippet", "")
+    lead_context = {
+        "name": f"{lead.get('first_name', '')} {lead.get('last_name', '')}".strip(),
+        "company": lead.get("company", ""),
+        "title": lead.get("title", ""),
+        "subject": seq_rows[0].get("subject", ""),
+    }
+
+    from backend.agents.reply_classifier import classify_reply
+    from backend.agents.followup import generate_reply_draft
+
+    classification = classify_reply(reply_snippet, lead_context)
+    new_draft = generate_reply_draft(lead_id, "client", reply_snippet, classification, feedback=body.feedback)
+    supabase.table("leads").update({"pending_reply_draft": new_draft}).eq("id", lead_id).execute()
+    return {"draft": new_draft}
 
 
 @router.patch("/{lead_id}")

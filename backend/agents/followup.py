@@ -2,10 +2,129 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 from backend.integrations.supabase_client import supabase
-from backend.utils.anthropic_client import generate
+from backend.utils.anthropic_client import classify, generate
 from backend.prompts.system_prompts import FOLLOWUP_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
+
+_CLOSING_SYSTEM = (
+    "You are a concise B2B email copywriter. Write plain-text email bodies only — "
+    "no subject line, no greeting header, no sign-off. Be brief and direct."
+)
+
+
+def generate_closing_email(entity_id: str, track: str, original_subject: str = "") -> str:
+    """Generate a Day 14 closing-the-loop email body using Claude Haiku.
+
+    Args:
+        entity_id: UUID of the lead or investor_target.
+        track: 'client' or 'investor'.
+        original_subject: Subject of the first email in the sequence (for context).
+
+    Returns:
+        Plain-text email body string.
+    """
+    if track == "client":
+        row = (
+            supabase.table("leads")
+            .select("first_name, last_name, company")
+            .eq("id", entity_id)
+            .single()
+            .execute()
+            .data or {}
+        )
+        name = f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
+        company = row.get("company", "")
+    else:
+        row = (
+            supabase.table("investor_targets")
+            .select("contact_name, firm_name")
+            .eq("id", entity_id)
+            .single()
+            .execute()
+            .data or {}
+        )
+        name = row.get("contact_name") or row.get("firm_name", "")
+        company = row.get("firm_name", "")
+
+    prompt = (
+        f"Write a 3-sentence closing-the-loop cold email body to {name} at {company}. "
+        f"Original topic: {original_subject}. "
+        "This is the final touchpoint — acknowledge it's the last email, keep the door open, "
+        "and don't be pushy. Return only the body text."
+    )
+    return classify(_CLOSING_SYSTEM, prompt)
+
+
+_REPLY_DRAFT_SYSTEM = (
+    "You are a B2B sales email copywriter drafting replies to incoming cold email responses. "
+    "Adapt tone and content based on outcome:\n"
+    "- positive: enthusiastic, propose specific meeting slots (10:30, 10:50, or 11:10 Berlin time)\n"
+    "- objection: acknowledge concern briefly, reframe with one data point, soften the ask\n"
+    "- question: answer directly and concisely, then pivot to a call\n"
+    "- wrong_person: thank them warmly, ask for an intro to the right person\n"
+    "- out_of_office: brief note, reference their return date if given\n"
+    "Rules: max 80 words, plain text only, no sign-off, no HTML, first line personalised."
+)
+
+
+def generate_reply_draft(
+    entity_id: str,
+    track: str,
+    reply_snippet: str,
+    classification: dict,
+    feedback: str = "",
+) -> str:
+    """Draft a reply to an incoming email reply using Claude Sonnet.
+
+    Args:
+        entity_id: UUID of lead or investor_target.
+        track: 'client' or 'investor'.
+        reply_snippet: The reply text received.
+        classification: Output from classify_reply().
+        feedback: Optional operator feedback to refine a previous draft.
+
+    Returns:
+        Plain-text reply body.
+    """
+    if track == "client":
+        row = (
+            supabase.table("leads")
+            .select("first_name, last_name, company, title")
+            .eq("id", entity_id)
+            .single()
+            .execute()
+            .data or {}
+        )
+        name = f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
+        company = row.get("company", "")
+    else:
+        row = (
+            supabase.table("investor_targets")
+            .select("contact_name, firm_name")
+            .eq("id", entity_id)
+            .single()
+            .execute()
+            .data or {}
+        )
+        name = row.get("contact_name") or row.get("firm_name", "")
+        company = row.get("firm_name", "")
+
+    outcome = classification.get("outcome", "question")
+    summary = classification.get("summary", "")
+
+    user_message = (
+        f"Contact: {name} at {company}\n"
+        f"Reply outcome: {outcome}\n"
+        f"What they said: {summary}\n"
+        f"Reply snippet: {reply_snippet}\n\n"
+    )
+    if feedback:
+        user_message += f"Operator feedback on previous draft: {feedback}\n\n"
+    user_message += "Write the reply body now."
+
+    return generate(_REPLY_DRAFT_SYSTEM, user_message)
+
 
 _OUTCOME_DELAYS = {
     "hot": 1,

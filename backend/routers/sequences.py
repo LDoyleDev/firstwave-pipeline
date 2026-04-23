@@ -106,11 +106,25 @@ def approve_outreach(entity_id: str, body: ApproveRequest) -> dict:
     if track == "client":
         name = f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
         company = row.get("company", "")
+        _send_telegram(f"Approved: {name} at {company} — sequence scheduled")
     else:
         name = row.get("contact_name") or row.get("firm_name", "")
         company = row.get("firm_name", "")
+        tier = row.get("tier", 99)
 
-    _send_telegram(f"Approved: {name} at {company} — sequence scheduled")
+        # Tier 1 investors: ask about warm intro before sending cold email
+        if tier == 1:
+            supabase.table("investor_targets").update({
+                "pending_intro_check": True,
+            }).eq("id", entity_id).execute()
+            _send_telegram(
+                f"🤝 Before emailing {name} at {company} (Tier 1):\n"
+                f"Do you have a warm connection who could intro you?\n\n"
+                f"If yes, say: intro via [name]\n"
+                f"If no, say: send cold"
+            )
+        else:
+            _send_telegram(f"Approved: {name} at {company} — sequence scheduled")
 
     return {"status": "approved", "entity_id": entity_id, "total_approved": new_count}
 

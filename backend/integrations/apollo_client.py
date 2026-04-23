@@ -61,54 +61,68 @@ def search_leads(
     industry: str,
     geography: list[str],
     min_employees: int = 10,
-    limit: int = 20,
+    max_pages: int = 1,
 ) -> list[dict]:
-    """Search for leads matching the given criteria.
+    """Search for leads matching the given criteria, with optional multi-page fetching.
 
     Args:
         job_titles: List of job titles to target (e.g. ["VP Revenue", "Revenue Manager"]).
         industry: Industry keyword (e.g. "hospitality hotels").
         geography: List of location strings (e.g. ["Germany", "Austria", "Switzerland"]).
         min_employees: Minimum company headcount filter.
-        limit: Maximum results to return (capped at 25 per free tier page limit).
+        max_pages: Number of pages to fetch (25 results/page). Default 1 for backward compat.
 
     Returns:
-        List of prospect dicts: first_name, last_name, title, company, email, linkedin_url, location.
+        List of prospect dicts: first_name, last_name, title, company, company_website,
+        email, linkedin_url, location.
     """
-    time.sleep(_RATE_LIMIT_DELAY)
+    all_results: list[dict] = []
 
-    response = httpx.post(
-        f"{BASE_URL}/mixed_people/search",
-        headers=_HEADERS,
-        json={
-            "api_key": APOLLO_API_KEY,
-            "page": 1,
-            "per_page": min(limit, 25),
-            "person_titles": job_titles,
-            "person_locations": geography,
-            "organization_num_employees_ranges": [f"{min_employees},10000"],
-            "q_keywords": industry,
-        },
-        timeout=20,
-    )
+    for page in range(1, max_pages + 1):
+        if page > 1:
+            time.sleep(_RATE_LIMIT_DELAY)
 
-    if response.status_code != 200:
-        logger.warning("Apollo search returned %d: %s", response.status_code, response.text[:200])
-        return []
+        response = httpx.post(
+            f"{BASE_URL}/mixed_people/search",
+            headers=_HEADERS,
+            json={
+                "api_key": APOLLO_API_KEY,
+                "page": page,
+                "per_page": 25,
+                "person_titles": job_titles,
+                "person_locations": geography,
+                "organization_num_employees_ranges": [f"{min_employees},10000"],
+                "q_keywords": industry,
+            },
+            timeout=20,
+        )
 
-    people = response.json().get("people", [])
-    results = [
-        {
-            "first_name": p.get("first_name", ""),
-            "last_name": p.get("last_name", ""),
-            "title": p.get("title", ""),
-            "company": (p.get("organization") or {}).get("name", ""),
-            "email": p.get("email", ""),
-            "linkedin_url": p.get("linkedin_url", ""),
-            "location": p.get("city", ""),
-        }
-        for p in people
-    ]
+        if response.status_code != 200:
+            logger.warning("Apollo search page %d returned %d: %s", page, response.status_code, response.text[:200])
+            break
 
-    logger.info("Apollo search: %d leads for titles=%s", len(results), job_titles)
-    return results
+        people = response.json().get("people", [])
+        if not people:
+            break
+
+        for p in people:
+            org = p.get("organization") or {}
+            all_results.append({
+                "first_name": p.get("first_name", ""),
+                "last_name": p.get("last_name", ""),
+                "title": p.get("title", ""),
+                "company": org.get("name", ""),
+                "company_website": org.get("website_url", ""),
+                "email": p.get("email", ""),
+                "linkedin_url": p.get("linkedin_url", ""),
+                "location": p.get("city", ""),
+            })
+
+        # Stop early if Apollo returned fewer than a full page
+        if len(people) < 25:
+            break
+
+        time.sleep(_RATE_LIMIT_DELAY)
+
+    logger.info("Apollo search: %d leads across %d page(s) for titles=%s", len(all_results), page, job_titles)
+    return all_results

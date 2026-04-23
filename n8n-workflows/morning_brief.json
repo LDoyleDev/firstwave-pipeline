@@ -1,0 +1,61 @@
+{
+  "name": "Morning Brief",
+  "nodes": [
+    {
+      "id": "cron-0755",
+      "name": "Daily 07:55 Berlin",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            { "mode": "custom", "cronExpression": "55 5 * * 1-5" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-morning-brief",
+      "name": "GET /status/morning-brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [460, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:8000/status/morning-brief",
+        "options": { "timeout": 30000 }
+      }
+    },
+    {
+      "id": "telegram-send",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage' }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "chat_id", "value": "={{ $env.TELEGRAM_CHAT_ID }}" },
+            { "name": "text", "value": "={{ $json.message }}" },
+            { "name": "parse_mode", "value": "" }
+          ]
+        },
+        "options": { "timeout": 10000 }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 07:55 Berlin": {
+      "main": [[ { "node": "GET /status/morning-brief", "type": "main", "index": 0 } ]]
+    },
+    "GET /status/morning-brief": {
+      "main": [[ { "node": "Send to Telegram", "type": "main", "index": 0 } ]]
+    }
+  },
+  "active": true,
+  "description": "Fires at 07:55 Mon–Fri Berlin time (05:55 UTC). Fetches morning brief from API and sends to Telegram. Arrives just before the 08:00 sequence scheduler run."
+}

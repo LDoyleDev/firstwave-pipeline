@@ -66,56 +66,37 @@ def send_email(
     return gmail_id
 
 
-def check_replies(sequence_ids: list[str]) -> list[dict]:
-    """Check whether any active email sequences have received replies.
+def check_replies(gmail_message_ids: list[str]) -> list[dict]:
+    """Check whether Gmail message threads have received replies.
 
     Args:
-        sequence_ids: List of email_sequence UUIDs with gmail_message_id set.
+        gmail_message_ids: List of Gmail message IDs (from email_sequences.gmail_message_id).
 
     Returns:
-        List of dicts: {sequence_id, replied: bool, reply_snippet: str|None}.
+        List of dicts: {gmail_message_id, replied: bool, reply_snippet: str|None}.
     """
-    from backend.integrations.supabase_client import supabase
-
     results: list[dict] = []
     service = build("gmail", "v1", credentials=_get_credentials())
 
-    for seq_id in sequence_ids:
-        row = (
-            supabase.table("email_sequences")
-            .select("gmail_message_id")
-            .eq("id", seq_id)
-            .single()
-            .execute()
-        )
-        if not row.data or not row.data.get("gmail_message_id"):
-            results.append({"sequence_id": seq_id, "replied": False, "reply_snippet": None})
-            continue
-
-        gmail_message_id = row.data["gmail_message_id"]
-
+    for gm_id in gmail_message_ids:
         try:
-            # Fetch the original message to get its thread ID
             msg = service.users().messages().get(
-                userId="me", id=gmail_message_id, format="minimal"
+                userId="me", id=gm_id, format="minimal"
             ).execute()
             thread_id = msg["threadId"]
-
-            # Fetch the thread and count messages; > 1 means a reply exists
             thread = service.users().threads().get(
                 userId="me", id=thread_id, format="minimal"
             ).execute()
             messages = thread.get("messages", [])
             replied = len(messages) > 1
             reply_snippet = messages[-1].get("snippet", "") if replied else None
-
             results.append({
-                "sequence_id": seq_id,
+                "gmail_message_id": gm_id,
                 "replied": replied,
                 "reply_snippet": reply_snippet,
             })
         except Exception as e:
-            logger.warning("Could not check replies for sequence %s: %s", seq_id, e)
-            results.append({"sequence_id": seq_id, "replied": False, "reply_snippet": None})
+            logger.warning("Could not check replies for gmail_id %s: %s", gm_id, e)
+            results.append({"gmail_message_id": gm_id, "replied": False, "reply_snippet": None})
 
     return results

@@ -5,7 +5,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.routers import leads, investors, meetings, sequences, voice, discovery
+from backend.routers import leads, investors, meetings, sequences, voice, discovery, actions, status, analytics
 
 app = FastAPI(title="FirstWave Pipeline", version="1.0.0")
 
@@ -24,6 +24,9 @@ app.include_router(meetings.router, prefix="/meetings", tags=["meetings"])
 app.include_router(sequences.router, tags=["sequences"])
 app.include_router(discovery.router, tags=["discovery"])
 app.include_router(voice.router, tags=["voice"])  # paths defined in router: /webhook/telegram, /voice/feedback
+app.include_router(actions.router, prefix="/actions", tags=["actions"])
+app.include_router(status.router, prefix="/status", tags=["status"])
+app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 import json
 import logging
 from backend.integrations.supabase_client import supabase
-from backend.utils.anthropic_client import generate
+from backend.utils.anthropic_client import classify, generate
 from backend.prompts.system_prompts import (
     CLIENT_OUTREACH_SYSTEM_PROMPT,
     INVESTOR_OUTREACH_SYSTEM_PROMPT,
@@ -179,3 +179,66 @@ def regenerate_with_feedback(entity_id: str, track: str, feedback: str) -> dict:
         logger.info("Outreach regenerated with feedback for %s (%s)", entity_id, track)
 
     return draft
+
+
+_REENGAGEMENT_SYSTEM = (
+    "You are a B2B cold email copywriter writing re-engagement emails. "
+    "The prospect was contacted 30+ days ago and did not reply. "
+    "Use one of these angles depending on what fits best: "
+    "(1) a new relevant stat or data point, "
+    "(2) a seasonal or timely hook, "
+    "(3) an explicit closing-the-loop ('I don't want to keep emailing if now isn't the right time'). "
+    "Max 60 words for the body. Return JSON only: "
+    '{"subject": "...", "body": "..."}'
+)
+
+
+def generate_reengagement_email(lead_id: str) -> dict:
+    """Generate a re-engagement email for a cold lead using Claude Haiku.
+
+    Args:
+        lead_id: UUID of the lead.
+
+    Returns:
+        Dict with subject and body strings.
+    """
+    lead = (
+        supabase.table("leads")
+        .select("first_name, last_name, company, title, outreach_email_1")
+        .eq("id", lead_id)
+        .single()
+        .execute()
+        .data or {}
+    )
+    name = f"{lead.get('first_name', '')} {lead.get('last_name', '')}".strip()
+    company = lead.get("company", "")
+
+    # Get original subject for context
+    original_subject = ""
+    raw = lead.get("outreach_email_1")
+    if raw:
+        try:
+            e1 = json.loads(raw) if isinstance(raw, str) else raw
+            original_subject = e1.get("subject", "")
+        except Exception:
+            pass
+
+    prompt = (
+        f"Lead: {name} at {company} ({lead.get('title', '')})\n"
+        f"Original email subject: {original_subject}\n"
+        f"They did not reply to 3 emails. Write a re-engagement email now."
+    )
+
+    raw_response = classify(_REENGAGEMENT_SYSTEM, prompt)
+    try:
+        return json.loads(raw_response)
+    except json.JSONDecodeError:
+        cleaned = raw_response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse reengagement JSON for %s: %s", lead_id, raw_response[:200])
+            return {
+                "subject": f"Following up — {company}",
+                "body": "I wanted to check in one more time. If now isn't the right time, no worries at all. Happy to reconnect whenever makes sense.",
+            }
