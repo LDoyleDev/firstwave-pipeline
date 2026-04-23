@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-04-23 — Raspberry Pi Deployment + Auto-Deploy
+
+### Built
+- `start.sh` — wrapper script that sources `.env` and starts uvicorn on port 8002; bypasses systemd EnvironmentFile parsing quirks
+- `/etc/systemd/system/firstwave-api.service` — systemd service using `start.sh` as ExecStart; runs as user `vybe`; Restart=always
+- nginx config on Pi — port 3001 serving `frontend/dist/`, `/api/` proxied to FastAPI on 8002
+- Cloudflare Tunnel config updated to route `firstwave.vybe-dev.com` to `localhost:3001`
+- `.github/workflows/deploy.yml` — GitHub Actions workflow using self-hosted runner on Pi; triggers on push to main; pulls, rebuilds frontend, restarts API
+- Self-hosted GitHub Actions runner installed on Pi (`~/actions-runner`), running as systemd service
+
+### Key issues resolved
+- Port conflict: APP_PORT=8000 in `.env` was overriding `--port 8002` arg (uvicorn reads env var); fixed by wrapper script using `exec` with explicit `--port 8002` on one line
+- nginx 500: `www-data` couldn't traverse `/home/vybe/` — fixed with `chmod o+x` on home, project, frontend, and dist directories
+- GitHub PAT missing `workflow` scope — regenerated token with `repo` + `workflow` scopes
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `curl http://localhost:8002/health` (Pi) | `{"status":"ok"}` ✓ |
+| `curl http://localhost:3001` (Pi) | 200 ✓ |
+| GitHub Actions deploy | success ✓ |
+
+---
+
 ## 2026-04-23 — Phase 7: Seed Data + Final Polish
 
 ### Built
