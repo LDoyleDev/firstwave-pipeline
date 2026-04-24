@@ -1,5 +1,5 @@
-import json
 import os
+import subprocess
 import time
 import logging
 from pathlib import Path
@@ -10,61 +10,29 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-SONNET = "claude-sonnet-4-6"
-HAIKU = "claude-haiku-4-5-20251001"
+# Model aliases — Claude Code resolves these to the latest versions automatically
+SONNET = "sonnet"
+HAIKU = "haiku"  # most efficient for classification and intent parsing
 
+_CLAUDE_BIN = str(Path.home() / ".local" / "bin" / "claude")
 _CREDENTIALS_PATH = Path.home() / ".claude" / ".credentials.json"
 
-_cached_client: Anthropic | None = None
-_token_expires_at: float = 0.0
+# Direct SDK client — only used when ANTHROPIC_API_KEY is explicitly set
+_sdk_client: Anthropic | None = None
 
 
-def _get_client() -> Anthropic:
-    """Return an Anthropic client, refreshing if the OAuth token has changed."""
-    global _cached_client, _token_expires_at
-
-    # Prefer explicit API key from env
-    env_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    if env_key:
-        if _cached_client is None:
-            _cached_client = Anthropic(api_key=env_key)
-        return _cached_client
-
-    # Fall back to Claude Max OAuth token from Claude Code credentials
-    now = time.time()
-    if _cached_client is not None and now < _token_expires_at - 300:
-        return _cached_client
-
-    last_exc: Exception | None = None
-    for attempt in range(4):
-        try:
-            creds = json.loads(_CREDENTIALS_PATH.read_text())
-            oauth = creds["claudeAiOauth"]
-            token = oauth["accessToken"]
-            _token_expires_at = oauth["expiresAt"] / 1000  # ms → s
-            _cached_client = Anthropic(auth_token=token)
-            logger.debug("Anthropic client initialised from Claude Max OAuth token (expires %s)",
-                         time.strftime("%Y-%m-%d %H:%M", time.localtime(_token_expires_at)))
-            return _cached_client
-        except Exception as e:
-            last_exc = e
-            if attempt < 3:
-                # Credentials file may be briefly unavailable during OAuth token refresh
-                time.sleep(2 ** attempt)
-    raise RuntimeError(
-        f"No ANTHROPIC_API_KEY set and could not read Claude Code OAuth token: {last_exc}"
-    ) from last_exc
+def _get_sdk_client() -> Anthropic:
+    global _sdk_client
+    if _sdk_client is None:
+        _sdk_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    return _sdk_client
 
 
-def _call_with_retry(system_prompt: str, user_message: str, model: str) -> str:
-    """Call Anthropic API with exponential backoff (max 5 attempts).
-
-    Uses longer waits to accommodate Claude Max OAuth token rate limits,
-    which are shared with the interactive Claude Code session.
-    """
+def _call_sdk(system_prompt: str, user_message: str, model: str) -> str:
+    """Direct Anthropic SDK call — used only when ANTHROPIC_API_KEY is set."""
     for attempt in range(5):
         try:
-            client = _get_client()
+            client = _get_sdk_client()
             response = client.messages.create(
                 model=model,
                 max_tokens=2048,
@@ -72,36 +40,67 @@ def _call_with_retry(system_prompt: str, user_message: str, model: str) -> str:
                 messages=[{"role": "user", "content": user_message}],
             )
             return response.content[0].text
-        except RateLimitError as e:
-            # Claude Max OAuth shares quota with the interactive session —
-            # use longer waits: 30s, 60s, 120s, 240s
+        except RateLimitError:
             wait = 30 * (2 ** attempt)
-            logger.warning("Rate limit hit (attempt %d/%d), waiting %ds", attempt + 1, 5, wait)
+            logger.warning("Rate limit (attempt %d/5), waiting %ds", attempt + 1, wait)
             if attempt < 4:
                 time.sleep(wait)
             else:
                 raise
-        except APIConnectionError as e:
+        except (APIConnectionError, APIError) as e:
             wait = 2 ** attempt * 2
-            logger.warning("Connection error (attempt %d), waiting %ds: %s", attempt + 1, wait, e)
+            logger.warning("API error (attempt %d/5): %s", attempt + 1, e)
             if attempt < 4:
                 time.sleep(wait)
             else:
                 raise
-        except APIError as e:
-            logger.error("Anthropic API error (attempt %d): %s", attempt + 1, e)
+    raise RuntimeError("All SDK retry attempts exhausted")
+
+
+def _call_cli(system_prompt: str, user_message: str, model: str) -> str:
+    """Claude Code CLI call — uses Claude Max OAuth, no API key needed."""
+    for attempt in range(5):
+        try:
+            result = subprocess.run(
+                [
+                    _CLAUDE_BIN,
+                    "-p", user_message,
+                    "--system-prompt", system_prompt,
+                    "--model", model,
+                    "--no-session-persistence",
+                    "--output-format", "text",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"Claude CLI error: {result.stderr[:300]}")
+            return result.stdout.strip()
+        except subprocess.TimeoutExpired:
+            logger.warning("Claude CLI timeout (attempt %d/5)", attempt + 1)
             if attempt < 4:
-                time.sleep(2 ** attempt)
+                time.sleep(10 * (attempt + 1))
             else:
                 raise
-    raise RuntimeError("All retry attempts exhausted")
+        except Exception as e:
+            logger.warning("Claude CLI error (attempt %d/5): %s", attempt + 1, e)
+            if attempt < 4:
+                time.sleep(5 * (attempt + 1))
+            else:
+                raise
+    raise RuntimeError("All CLI retry attempts exhausted")
 
 
 def generate(system_prompt: str, user_message: str, model: str = SONNET) -> str:
     """Generate a response using Claude Sonnet (or specified model)."""
-    return _call_with_retry(system_prompt, user_message, model)
+    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        return _call_sdk(system_prompt, user_message, model)
+    return _call_cli(system_prompt, user_message, model)
 
 
 def classify(system_prompt: str, user_message: str) -> str:
-    """Classify using Claude Haiku — fast, cheap, for intent parsing and categorisation."""
-    return _call_with_retry(system_prompt, user_message, HAIKU)
+    """Classify using Claude Haiku — fastest, most efficient for intent parsing."""
+    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        return _call_sdk(system_prompt, user_message, HAIKU)
+    return _call_cli(system_prompt, user_message, HAIKU)
