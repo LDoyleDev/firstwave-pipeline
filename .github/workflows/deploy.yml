@@ -13,6 +13,5 @@ jobs:
           cd /home/vybe/firstwave-pipeline
           git pull origin main
           venv/bin/pip install -r requirements.txt -q
-          cd frontend && npm install --silent && CHOKIDAR_USEPOLLING=1 npm run build && cd ..
-          sudo systemctl restart firstwave-api
+          sudo systemctl restart firstwave-backend
           echo "Deploy complete"
