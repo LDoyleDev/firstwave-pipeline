@@ -11,7 +11,12 @@ app = FastAPI(title="FirstWave Pipeline", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://0.0.0.0:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://0.0.0.0:5173",
+        "http://100.113.88.92:5173",
+        "https://firstwave-pipeline.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
