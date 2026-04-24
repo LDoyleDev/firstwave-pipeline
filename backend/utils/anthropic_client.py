@@ -42,7 +42,7 @@ def _get_client() -> Anthropic:
             oauth = creds["claudeAiOauth"]
             token = oauth["accessToken"]
             _token_expires_at = oauth["expiresAt"] / 1000  # ms → s
-            _cached_client = Anthropic(api_key=token)
+            _cached_client = Anthropic(auth_token=token)
             logger.debug("Anthropic client initialised from Claude Max OAuth token (expires %s)",
                          time.strftime("%Y-%m-%d %H:%M", time.localtime(_token_expires_at)))
             return _cached_client
