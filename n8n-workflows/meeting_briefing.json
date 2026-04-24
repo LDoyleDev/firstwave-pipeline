@@ -27,7 +27,7 @@
       "position": [460, 300],
       "parameters": {
         "method": "GET",
-        "url": "http://localhost:8000/meetings/upcoming-briefings",
+        "url": "http://localhost:8001/meetings/upcoming-briefings",
         "options": {
           "timeout": 60000
         }

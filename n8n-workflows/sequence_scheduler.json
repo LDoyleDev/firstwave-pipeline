@@ -23,7 +23,7 @@
       "position": [460, 300],
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:8000/sequences/process",
+        "url": "http://localhost:8001/sequences/process",
         "options": { "timeout": 60000 }
       }
     }

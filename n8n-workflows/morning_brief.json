@@ -23,7 +23,7 @@
       "position": [460, 300],
       "parameters": {
         "method": "GET",
-        "url": "http://localhost:8000/status/morning-brief",
+        "url": "http://localhost:8001/status/morning-brief",
         "options": { "timeout": 30000 }
       }
     },

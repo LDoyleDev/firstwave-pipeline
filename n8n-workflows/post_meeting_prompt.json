@@ -27,7 +27,7 @@
       "position": [460, 300],
       "parameters": {
         "method": "GET",
-        "url": "http://localhost:8000/meetings/completed-pending-feedback",
+        "url": "http://localhost:8001/meetings/completed-pending-feedback",
         "options": {
           "timeout": 30000
         }
