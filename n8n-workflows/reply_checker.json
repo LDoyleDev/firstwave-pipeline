@@ -6,7 +6,10 @@
       "name": "Every 2 Hours Trigger",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "triggerTimes": {
           "item": [
@@ -24,7 +27,10 @@
       "name": "POST /sequences/check-replies",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://localhost:8001/sequences/check-replies",
@@ -48,5 +54,6 @@
     }
   },
   "active": true,
-  "description": "Runs every 2 hours. Checks Gmail for replies to active sequences and updates pipeline stages."
+  "description": "Runs every 2 hours. Checks Gmail for replies to active sequences and updates pipeline stages.",
+  "id": "e1cb9897-1abd-4f0f-baa3-a2d6e64ed14a"
 }

@@ -3,14 +3,20 @@
   "nodes": [
     {
       "id": "cron-hourly-business",
-      "name": "Hourly 09:00–17:00 Mon–Fri",
+      "name": "Hourly 09:00\u201317:00 Mon\u2013Fri",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "triggerTimes": {
           "item": [
-            { "mode": "custom", "cronExpression": "0 9-17 * * 1-5" }
+            {
+              "mode": "custom",
+              "cronExpression": "0 9-17 * * 1-5"
+            }
           ]
         }
       }
@@ -20,16 +26,21 @@
       "name": "POST /sequences/process",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://localhost:8001/sequences/process",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       }
     }
   ],
   "connections": {
-    "Hourly 09:00–17:00 Mon–Fri": {
+    "Hourly 09:00\u201317:00 Mon\u2013Fri": {
       "main": [
         [
           {
@@ -42,5 +53,6 @@
     }
   },
   "active": true,
-  "description": "Runs every hour 09:00–17:00 Mon–Fri Berlin time. Emails spread across the send window rather than all firing at 08:00."
+  "description": "Runs every hour 09:00\u201317:00 Mon\u2013Fri Berlin time. Emails spread across the send window rather than all firing at 08:00.",
+  "id": "c4a9293d-91b2-49a8-802f-f835201ccbc8"
 }

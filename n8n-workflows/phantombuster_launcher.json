@@ -6,7 +6,10 @@
       "name": "Daily 06:00 Trigger",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "triggerTimes": {
           "item": [
@@ -24,7 +27,10 @@
       "name": "POST /discovery/phantombuster-launch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://localhost:8001/discovery/phantombuster-launch",
@@ -48,5 +54,6 @@
     }
   },
   "active": true,
-  "description": "Runs daily at 06:00. Launches PhantomBuster LinkedIn scraper before Liam starts work, preserving the 10 min/day free quota."
+  "description": "Runs daily at 06:00. Launches PhantomBuster LinkedIn scraper before Liam starts work, preserving the 10 min/day free quota.",
+  "id": "a08fd40e-826d-4936-acfd-5c687f7108ed"
 }

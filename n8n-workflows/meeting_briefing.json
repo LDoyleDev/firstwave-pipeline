@@ -6,7 +6,10 @@
       "name": "Every 10 Minutes Trigger",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "triggerTimes": {
           "item": [
@@ -24,7 +27,10 @@
       "name": "GET /meetings/upcoming-briefings",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "http://localhost:8001/meetings/upcoming-briefings",
@@ -48,5 +54,6 @@
     }
   },
   "active": true,
-  "description": "Runs every 10 minutes. Generates and sends pre-meeting briefings for meetings starting within 35 minutes."
+  "description": "Runs every 10 minutes. Generates and sends pre-meeting briefings for meetings starting within 35 minutes.",
+  "id": "7285b8ba-26ac-4e11-a00e-9f93cb2f8b20"
 }

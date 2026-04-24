@@ -6,7 +6,10 @@
       "name": "Every 5 Minutes Trigger",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "triggerTimes": {
           "item": [
@@ -24,7 +27,10 @@
       "name": "GET /meetings/completed-pending-feedback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "http://localhost:8001/meetings/completed-pending-feedback",
@@ -48,5 +54,6 @@
     }
   },
   "active": true,
-  "description": "Runs every 5 minutes. Detects meetings that ended 20+ minutes ago without feedback and sends Telegram prompts to the operator."
+  "description": "Runs every 5 minutes. Detects meetings that ended 20+ minutes ago without feedback and sends Telegram prompts to the operator.",
+  "id": "accf13bb-19e4-4be7-90f0-7777f04b0547"
 }
