@@ -97,8 +97,9 @@
 Frontend:     React + Vite (dev: vybe-desktop:5173 · prod: Vercel)
 Backend:      Python 3.12 + FastAPI (port 8001 on vybe-pi, uvicorn --host ::)
 Database:     Supabase (PostgreSQL, free tier)
-AI:           Claude Max OAuth token — Sonnet for generation, Haiku for classification
-              (token read from ~/.claude/.credentials.json — no API key; Claude Code must be installed + authed on Pi)
+AI:           Ollama first (gpt-oss:20b primary · qwen3:14b local fallback) → Claude Max OAuth fallback
+              Ollama on vybe-desktop (100.113.88.92:11434, ROCm/GPU). Falls back to Claude if unreachable.
+              Claude: token read from ~/.claude/.credentials.json — no API key; Claude Code must be installed + authed on Pi
 Transcription: Groq Whisper API
 Voice:        Telegram Bot (python-telegram-bot) → Groq → Claude intent parser
 Email:        Gmail API via OAuth2 (liam@firstwaveai.com — Google Workspace)

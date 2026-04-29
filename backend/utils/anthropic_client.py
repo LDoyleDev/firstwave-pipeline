@@ -3,6 +3,7 @@ import subprocess
 import time
 import logging
 from pathlib import Path
+import httpx
 from anthropic import Anthropic, APIError, RateLimitError, APIConnectionError
 from dotenv import load_dotenv
 
@@ -13,6 +14,12 @@ logger = logging.getLogger(__name__)
 # Model aliases — Claude Code resolves these to the latest versions automatically
 SONNET = "sonnet"
 HAIKU = "haiku"  # most efficient for classification and intent parsing
+
+# Local Ollama inference (vybe-desktop over Tailscale)
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://100.113.88.92:11434")
+_OLLAMA_PRIMARY = "gpt-oss:20b"   # primary for all tasks — strongest reasoning, 131k context
+_OLLAMA_FALLBACK = "qwen3:14b"    # local fallback if gpt-oss unavailable
+_OLLAMA_TIMEOUT = 120.0
 
 _CLAUDE_BIN = str(Path.home() / ".local" / "bin" / "claude")
 _CREDENTIALS_PATH = Path.home() / ".claude" / ".credentials.json"
@@ -92,15 +99,48 @@ def _call_cli(system_prompt: str, user_message: str, model: str) -> str:
     raise RuntimeError("All CLI retry attempts exhausted")
 
 
+def _try_ollama(system_prompt: str, user_message: str, model: str) -> str | None:
+    """Attempt Ollama completion. Returns None if unreachable or error."""
+    try:
+        resp = httpx.post(
+            f"{OLLAMA_HOST}/api/generate",
+            json={
+                "model": model,
+                "prompt": f"{system_prompt}\n\n{user_message}" if system_prompt else user_message,
+                "stream": False,
+            },
+            timeout=_OLLAMA_TIMEOUT,
+        )
+        resp.raise_for_status()
+        return str(resp.json()["response"])
+    except Exception as e:
+        logger.warning("Ollama %s unavailable (%s)", model, e.__class__.__name__)
+        return None
+
+
+def _try_ollama_with_fallback(system_prompt: str, user_message: str) -> str | None:
+    """Try gpt-oss:20b first, fall back to qwen3:14b before escalating to Claude."""
+    result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
+    if result is not None:
+        return result
+    return _try_ollama(system_prompt, user_message, _OLLAMA_FALLBACK)
+
+
 def generate(system_prompt: str, user_message: str, model: str = SONNET) -> str:
-    """Generate a response using Claude Sonnet (or specified model)."""
+    """Generate a response — Ollama first (gpt-oss → qwen3 → Claude)."""
+    result = _try_ollama_with_fallback(system_prompt, user_message)
+    if result is not None:
+        return result
     if os.getenv("ANTHROPIC_API_KEY", "").strip():
         return _call_sdk(system_prompt, user_message, model)
     return _call_cli(system_prompt, user_message, model)
 
 
 def classify(system_prompt: str, user_message: str) -> str:
-    """Classify using Claude Haiku — fastest, most efficient for intent parsing."""
+    """Classify — Ollama first (gpt-oss → qwen3 → Claude Haiku)."""
+    result = _try_ollama_with_fallback(system_prompt, user_message)
+    if result is not None:
+        return result
     if os.getenv("ANTHROPIC_API_KEY", "").strip():
         return _call_sdk(system_prompt, user_message, HAIKU)
     return _call_cli(system_prompt, user_message, HAIKU)
