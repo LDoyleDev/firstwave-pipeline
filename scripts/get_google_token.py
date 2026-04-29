@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 SCOPES = [
@@ -6,6 +8,9 @@ SCOPES = [
     'https://www.googleapis.com/auth/calendar'
 ]
 
-flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+DEFAULT_CREDS = Path.home() / ".secrets" / "firstwave" / "google-credentials.json"
+creds_path = os.environ.get("GOOGLE_CLIENT_SECRETS_FILE", str(DEFAULT_CREDS))
+
+flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
 creds = flow.run_local_server(port=0)
 print("REFRESH TOKEN:", creds.refresh_token)

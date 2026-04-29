@@ -7,13 +7,38 @@ Operator: Liam Doyle, liam@firstwaveai.com, Berlin.
 Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 
 ## Stack
-- Backend: Python 3.11 + FastAPI (port 8000)
-- Frontend: React + Vite (port 5173)
+- Backend: Python 3.12 + FastAPI
+- Frontend: React + Vite (dev: port 5173 · prod: Vercel)
 - Database: Supabase (PostgreSQL) — single source of truth
-- AI: Anthropic API — Sonnet for generation, Haiku for classification
+- AI: Claude Max OAuth token — Sonnet for generation, Haiku for classification (read from ~/.claude/.credentials.json — no API key)
 - Voice: Telegram bot + Groq Whisper transcription
 - Automation: n8n (localhost:5678)
 - Remote access: Tailscale
+
+## Port map — do not change without updating this table
+| Port | Process | Machine | Notes |
+|------|---------|---------|-------|
+| 8000 | vybe-trading FastAPI (`vybe-backend`) | Pi | DO NOT USE — owned by vybe-trading |
+| 8001 | FirstWave FastAPI (`firstwave-backend`) | Pi | production backend |
+| 5173 | Vite dev server | Desktop only | dev only, not on Pi |
+| 5678 | n8n | Pi | `n8n.service`, basic auth, sqlite at `~/.n8n/database.sqlite` |
+
+## Machines
+| Machine | Tailscale IP | Role |
+|---------|-------------|------|
+| vybe-desktop | 100.113.88.92 | Dev machine |
+| vybe-pi | 100.108.149.115 | Always-on server (firstwave-backend on 8001) |
+
+## Pi infrastructure
+- **Cloudflare Tunnel:** single tunnel (`7c973a7f-c739-48b2-9acf-ebc5b7f4a387`) with two ingress rules:
+  - `api.vybe-dev.com` → `localhost:8000` (vybe-trading — do not touch)
+  - `firstwave.vybe-dev.com` → `localhost:8001` (firstwave backend)
+  - Config: `~/.cloudflared/config.yml`
+- **`firstwave-backend.service`** — canonical backend service (port 8001), CI/CD deployed
+- **`firstwave-api.service`** — legacy orphan (was on 8002 via start.sh) — disabled and removed
+- **GitHub Actions Runner** (`actions.runner.LDoyleDev-firstwave-pipeline.vybe-pi`) — auto-deploys on push to main, restarts `firstwave-backend`
+- **Claude Code** — must be installed on Pi and authenticated with Claude Max account; backend reads OAuth token from `~/.claude/.credentials.json`
+- **`n8n.service`** — workflow automation on port 5678, basic-auth protected, sqlite db at `~/.n8n/database.sqlite`; workflow definitions live in `n8n-workflows/` and target `http://localhost:8001`
 
 ## Docs — read these before writing any code
 - docs/FIRSTWAVE_SYSTEM_CONTEXT.md — architecture, schema, env vars, rules (read every session)
