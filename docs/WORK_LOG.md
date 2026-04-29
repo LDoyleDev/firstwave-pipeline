@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-04-29 — Session 2: context refresh + smoke test
+
+### Done
+- Port 8002 stale uvicorn — confirmed gone; `firstwave-api.service` fully absent from systemd. No action needed.
+- **README.md** — rewritten "Starting the system" to reflect Pi deployment model (systemd, not manual terminal). All `localhost:8000` refs replaced with `firstwave.vybe-dev.com` / Tailscale URLs. `ANTHROPIC_API_KEY` env var replaced with Claude Max OAuth note.
+- **docs/FIRSTWAVE_SYSTEM_CONTEXT.md Section 4** — corrected Python 3.11→3.12, AI entry (API key → Claude Max OAuth token), hosting block updated to reflect Pi + n8n + Cloudflare Tunnel + CI/CD runner.
+- **docs/WORK_LOG.md** — resolved open issues from earlier session (port 8002 and follow_up_executor.json stub).
+- **Smoke test — all API-testable surfaces green:**
+  - 35 routes registered and responding
+  - `/health`, `/meetings/today` (3 correct slots), `/leads` (12), `/investors` (100), `/review-queue` (12 client / 100 investor)
+  - `/status/morning-brief` generates correct pipeline summary
+  - `/meetings/upcoming-briefings` and `/meetings/completed-pending-feedback` operational
+  - n8n crons confirmed firing (backend logs show `::1` GET every 5–10 min, no errors)
+  - No errors in backend journal for the past 30 min
+
+### Not tested (requires live Telegram interaction)
+- Voice command → discovery → enrich → review queue → approve → sequence → send flow
+- Cal.com booking + Google Calendar event creation
+- Pre-meeting briefing delivery via Telegram
+- Post-meeting feedback → follow-up draft → send flow
+
+### State
+- 12 client leads in `discovered` stage — ready to enrich
+- 100 investors in DB, none contacted — ready to start outreach
+- All n8n crons green
+
+---
+
 ## 2026-04-29 — Operations: fix silent n8n cron failures
 
 ### Found
@@ -16,8 +44,10 @@
 - Reverted misleading interim commit (8af47da) that switched workflow URLs to 127.0.0.1; the URL change had no runtime effect because n8n caches active-workflow definitions in memory and the cache survives `systemctl restart n8n.service` (saved as project memory for future sessions).
 
 ### Open / known issues
-- Stale uvicorn on port 8002 — investigate whether to kill the process and disable `firstwave-api.service` properly (or whether it's harmlessly idle).
-- `follow_up_executor.json` stub — decide delete vs. build; current Telegram-triggered followup flow may have made it obsolete.
+- ~~Stale uvicorn on port 8002~~ — **resolved**: process gone by next session; `firstwave-api.service` fully absent from systemd. Port 8002 is clear.
+
+### Resolved in session
+- `follow_up_executor.json` stub removed (commit 6e5613b) — confirmed redundant: `post_meeting_prompt.json` (active n8n cron, every 5 min) and the Telegram voice flow (`intent_parser._handle_send_followup → POST /meetings/{id}/confirm-followup`) cover the same functionality; stub was never imported into n8n.
 
 ---
 

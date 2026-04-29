@@ -94,18 +94,21 @@
 ## 4. TECHNOLOGY STACK
 
 ```
-Frontend:     React + Vite (served locally, accessible via Tailscale)
-Backend:      Python 3.11 + FastAPI
+Frontend:     React + Vite (dev: vybe-desktop:5173 · prod: Vercel)
+Backend:      Python 3.12 + FastAPI (port 8001 on vybe-pi, uvicorn --host ::)
 Database:     Supabase (PostgreSQL, free tier)
-AI:           Anthropic Claude API (claude-sonnet-4-20250514 for generation, claude-haiku-4-5-20251001 for classification)
-Transcription: Groq Whisper API (already configured on operator's machine)
+AI:           Claude Max OAuth token — Sonnet for generation, Haiku for classification
+              (token read from ~/.claude/.credentials.json — no API key; Claude Code must be installed + authed on Pi)
+Transcription: Groq Whisper API
 Voice:        Telegram Bot (python-telegram-bot) → Groq → Claude intent parser
 Email:        Gmail API via OAuth2 (liam@firstwaveai.com — Google Workspace)
 Calendar:     Google Calendar API via OAuth2
 Scheduling:   Cal.com free tier (API access included, custom availability slots)
 Lead data:    Apollo.io free tier (email enrichment) + PhantomBuster free tier (LinkedIn scraping)
-Automation:   n8n (local instance, already running) for workflow orchestration
-Hosting:      Local Ubuntu 24.04 desktop, remote access via Tailscale
+Automation:   n8n on vybe-pi (port 5678, n8n.service) — workflows target http://localhost:8001
+Hosting:      vybe-pi (always-on, Cloudflare Tunnel → firstwave.vybe-dev.com); vybe-desktop for dev
+              Tailscale IPs: desktop 100.113.88.92, Pi 100.108.149.115
+              CI/CD: GitHub Actions runner on Pi, auto-restarts firstwave-backend on push to main
 ```
 
 ---

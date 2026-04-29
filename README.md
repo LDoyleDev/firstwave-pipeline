@@ -10,27 +10,32 @@ Meeting window: **10:30, 10:50, 11:10 Europe/Berlin only**
 
 ## Starting the system
 
-Open two terminals:
+The backend runs as a systemd service on **vybe-pi** — you do not start it manually.
 
-**Terminal 1 — Backend API (port 8000)**
-```bash
-PYTHONPATH=. venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-**Terminal 2 — Frontend (port 5173)**
+**Frontend (dev — vybe-desktop only):**
 ```bash
 cd frontend && CHOKIDAR_USEPOLLING=1 npm run dev
 ```
 
 **Access:**
-- Desktop: http://localhost:5173
-- Mobile (Tailscale): http://100.113.88.92:5173
-- API docs: http://localhost:8000/docs
-- Password: see `frontend/.env` → `VITE_ACCESS_PASSWORD`
+| Surface | URL |
+|---|---|
+| Frontend (dev) | http://localhost:5173 |
+| Frontend (Tailscale) | http://100.113.88.92:5173 |
+| Backend API (Tailscale) | http://100.108.149.115:8001 |
+| Backend API (public) | https://firstwave.vybe-dev.com |
+| API docs | https://firstwave.vybe-dev.com/docs |
+| n8n (Tailscale) | http://100.108.149.115:5678 |
+| Password | see `frontend/.env` → `VITE_ACCESS_PASSWORD` |
 
-**Register Telegram webhook** (run once after exposing the API publicly):
+**Restart backend (if needed — SSH to Pi first):**
+```bash
+sudo systemctl restart firstwave-backend
 ```
-POST https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url=https://{your-domain}/webhook/telegram
+
+**Register Telegram webhook** (run once):
+```
+POST https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url=https://firstwave.vybe-dev.com/webhook/telegram
 ```
 
 ---
@@ -79,7 +84,7 @@ Informational queries (pipeline status, review queue, next meeting) execute imme
 
 **Via API:**
 ```bash
-curl -X POST http://localhost:8000/leads \
+curl -X POST https://firstwave.vybe-dev.com/leads \
   -H "Content-Type: application/json" \
   -d '{
     "first_name": "Anna",
@@ -94,13 +99,13 @@ curl -X POST http://localhost:8000/leads \
 
 Then trigger enrichment + outreach:
 ```bash
-curl -X POST http://localhost:8000/leads/{id}/enrich
+curl -X POST https://firstwave.vybe-dev.com/leads/{id}/enrich
 ```
 The lead moves to `review_queue` after enrichment + outreach generation.
 
 **Via discovery run (bulk):**
 ```bash
-curl -X POST http://localhost:8000/discovery/run \
+curl -X POST https://firstwave.vybe-dev.com/discovery/run \
   -H "Content-Type: application/json" \
   -d '{
     "track": "client",
@@ -123,15 +128,15 @@ curl -X POST http://localhost:8000/discovery/run \
 **Via API:**
 ```bash
 # Approve
-curl -X POST http://localhost:8000/review-queue/{id}/approve \
+curl -X POST https://firstwave.vybe-dev.com/review-queue/{id}/approve \
   -d '{"track": "client"}'
 
 # Reject
-curl -X POST http://localhost:8000/review-queue/{id}/reject \
+curl -X POST https://firstwave.vybe-dev.com/review-queue/{id}/reject \
   -d '{"track": "client"}'
 
 # Edit then approve
-curl -X POST http://localhost:8000/review-queue/{id}/edit \
+curl -X POST https://firstwave.vybe-dev.com/review-queue/{id}/edit \
   -d '{"track": "client", "new_subject": "...", "new_body": "...", "email_number": 1}'
 ```
 
@@ -143,19 +148,19 @@ After 20 approvals on a track, the system flips to `auto` mode and no longer req
 
 ```bash
 # All leads by stage
-curl http://localhost:8000/leads
+curl https://firstwave.vybe-dev.com/leads
 
 # Today's 3 meeting slots
-curl http://localhost:8000/meetings/today
+curl https://firstwave.vybe-dev.com/meetings/today
 
 # Review queue (split by track)
-curl http://localhost:8000/review-queue
+curl https://firstwave.vybe-dev.com/review-queue
 
 # Investor pipeline
-curl http://localhost:8000/investors?tier=1
+curl https://firstwave.vybe-dev.com/investors?tier=1
 
 # Active email sequences
-curl http://localhost:8000/sequences?status=pending
+curl https://firstwave.vybe-dev.com/sequences?status=pending
 ```
 
 ---
@@ -211,7 +216,8 @@ Expected: 46 passed.
 Copy `.env.example` to `.env` and fill in all values:
 
 ```
-ANTHROPIC_API_KEY       — Claude API (Sonnet + Haiku)
+# No ANTHROPIC_API_KEY — uses Claude Max OAuth token from ~/.claude/.credentials.json
+# Claude Code must be installed and authenticated on vybe-pi
 SUPABASE_URL            — Supabase project URL
 SUPABASE_SERVICE_ROLE_KEY — Service role key (backend only)
 SUPABASE_ANON_KEY       — Anon key (frontend only)
