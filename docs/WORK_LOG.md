@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-04-29 — Operations: fix silent n8n cron failures
+
+### Found
+- All 200 most recent n8n workflow runs (Meeting Briefing Trigger, Post-Meeting Feedback Prompt, Reply Checker, Sequence Scheduler, Morning Brief, PhantomBuster Daily Launcher) had been failing silently with `ECONNREFUSED ::1:8001` — Node's getaddrinfo resolved `localhost` to `::1` first, but uvicorn was bound to `0.0.0.0` (IPv4 only).
+- `firstwave-api.service` (legacy port-8002 uvicorn, supposedly removed in CLAUDE.md notes) is in fact still running on the Pi as PID 1532377 since 2026-04-24 — orphan process not catalogued by systemd anymore but still consuming the port.
+- `n8n-workflows/follow_up_executor.json` is an empty 0-node stub; the corresponding workflow was never imported into n8n. Likely redundant since `backend/routers/meetings.py::confirm-followup` is triggered by the Telegram voice flow, not n8n cron.
+
+### Fixed
+- `firstwave-backend.service` ExecStart switched from `--host 0.0.0.0` to `--host ::`. Three post-restart cron firings across two workflows green; CLAUDE.md documents the binding choice and warns IPv4 to 127.0.0.1:8001 is refused (uvicorn sets `IPV6_V6ONLY=1` despite `bindv6only=0`).
+- Refreshed CLAUDE.md infra section (port map, machines, Cloudflare tunnel + GH Actions runner + n8n.service + Claude Code OAuth).
+- `scripts/get_google_token.py` now reads creds path from `$GOOGLE_CLIENT_SECRETS_FILE` (default `~/.secrets/firstwave/google-credentials.json`) — Google OAuth client secret out of repo root.
+- Reverted misleading interim commit (8af47da) that switched workflow URLs to 127.0.0.1; the URL change had no runtime effect because n8n caches active-workflow definitions in memory and the cache survives `systemctl restart n8n.service` (saved as project memory for future sessions).
+
+### Open / known issues
+- Stale uvicorn on port 8002 — investigate whether to kill the process and disable `firstwave-api.service` properly (or whether it's harmlessly idle).
+- `follow_up_executor.json` stub — decide delete vs. build; current Telegram-triggered followup flow may have made it obsolete.
+
+---
+
 ## 2026-04-23 — Raspberry Pi Deployment + Auto-Deploy
 
 ### Built
