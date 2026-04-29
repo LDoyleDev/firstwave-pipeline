@@ -33,7 +33,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:8001/sequences/check-replies",
+        "url": "http://127.0.0.1:8001/sequences/check-replies",
         "options": {
           "timeout": 60000
         }
