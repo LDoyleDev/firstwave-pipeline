@@ -34,7 +34,7 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
   - `api.vybe-dev.com` → `localhost:8000` (vybe-trading — do not touch)
   - `firstwave.vybe-dev.com` → `localhost:8001` (firstwave backend)
   - Config: `~/.cloudflared/config.yml`
-- **`firstwave-backend.service`** — canonical backend service (port 8001), CI/CD deployed
+- **`firstwave-backend.service`** — canonical backend service (port 8001), CI/CD deployed. Uvicorn binds `--host ::` (IPv6 only — observed: IPv4 to 127.0.0.1:8001 is refused, so don't change the URL of any caller to 127.0.0.1). Reason: n8n's HTTP node resolves `localhost` to `::1` via Node's getaddrinfo; with the previous `--host 0.0.0.0` binding every n8n cron run failed with `ECONNREFUSED ::1:8001`. Tunnel/Tailscale callers reach the service via IPv6 too.
 - **`firstwave-api.service`** — legacy orphan (was on 8002 via start.sh) — disabled and removed
 - **GitHub Actions Runner** (`actions.runner.LDoyleDev-firstwave-pipeline.vybe-pi`) — auto-deploys on push to main, restarts `firstwave-backend`
 - **Claude Code** — must be installed on Pi and authenticated with Claude Max account; backend reads OAuth token from `~/.claude/.credentials.json`

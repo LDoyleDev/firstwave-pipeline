@@ -33,7 +33,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "http://127.0.0.1:8001/meetings/completed-pending-feedback",
+        "url": "http://localhost:8001/meetings/completed-pending-feedback",
         "options": {
           "timeout": 30000
         }

@@ -32,7 +32,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "http://127.0.0.1:8001/sequences/process",
+        "url": "http://localhost:8001/sequences/process",
         "options": {
           "timeout": 60000
         }
