@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-05-06 — Investor pipeline automation + lead discovery
+
+### Built / changed
+- **`backend/routers/actions.py`** — added `POST /actions/enrich-investors-batch` (picks up `identified` investors with no `enrichment_data`, enriches via `enrich_investor`, advances to `research_needed`) and `POST /actions/generate-investor-outreach-batch` (picks up `research_needed` investors with no `outreach_draft`, generates via `generate_investor_outreach`, advances to `ready_to_contact`)
+- **`backend/utils/anthropic_client.py`** — bumped Ollama context window to 16k (`num_ctx: 16384`) to improve enrichment prompt quality
+- **`frontend/src/components/review/ReviewCard.jsx`** — refactored to handle both client (1-email) and investor (2-email `email_1`/`email_2`) draft formats; extracted `EmailBlock` component and `parseJson` helper; removed unused `IS_PRODUCTION` import
+- **`n8n-workflows/investor_pipeline.json`** — new n8n workflow: daily Mon–Fri 07:30 cron chains enrich-investors-batch → generate-investor-outreach-batch; both steps idempotent
+- **Imported investor_pipeline workflow to n8n** on vybe-pi via API (`id: yOBJ4WwEuE9GZL3H`, active); API key used: `pipeline` key in `user_api_keys` table
+
+### Lead discovery findings
+- Ran full Apollo API discovery across all 14 markets (`--bypass-limit`); only yielded **48 new leads** (total 115 in DB) — Apollo free tier caps search results at ~50 contacts regardless of `max_pages` setting
+- **Root cause**: Apollo free tier limits are per API plan, not per request — pagination config is correct but quota blocks results
+- **Fix path**: upgrade Apollo to Basic ($49/mo) for 1000 export credits/month, OR manually export CSV from Apollo/LinkedIn web UI and import via `scripts/import_leads_csv.py`
+- Import script auto-detects Apollo CSV format (via `LinkedIn URL` header) and LinkedIn Sales Navigator format (via `Profile URL` header); deduplicates against existing DB emails
+
+### Current pipeline state
+- 115 total leads: 53 discovered, 5 enriched, 57 review_queue
+- 57 review_queue leads have outreach drafts written — awaiting operator approval in dashboard before any email sends
+- Investor pipeline automation live — first run tomorrow 07:30
+
+### Blockers / next
+- Apollo free tier: need paid plan or manual CSV export to reach 1000-lead target
+- 57 leads need review/approval in dashboard to move forward through outreach sequence
+
+---
+
 ## 2026-04-29 — Session 2: context refresh + smoke test
 
 ### Done
