@@ -3,24 +3,72 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Check, X, Pencil, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { IS_PRODUCTION } from '@/lib/constants'
+
+function parseJson(raw) {
+  if (!raw) return null
+  if (typeof raw === 'object') return raw
+  try { return JSON.parse(raw) } catch { return null }
+}
+
+function EmailBlock({ to, subject, body, label }) {
+  return (
+    <div className="mb-3">
+      {label && (
+        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</div>
+      )}
+      <div className="bg-navy rounded overflow-hidden text-xs">
+        <div className="border-b border-muted/30 px-3 py-2 space-y-1">
+          {to && (
+            <div className="flex gap-2">
+              <span className="text-gray-600 w-14 shrink-0">To</span>
+              <span className="text-gray-300">{to}</span>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <span className="text-gray-600 w-14 shrink-0">Subject</span>
+            <span className="text-gray-200 font-medium">{subject || '(no subject)'}</span>
+          </div>
+        </div>
+        <div className="px-3 py-2 text-gray-300 whitespace-pre-wrap leading-relaxed font-data">
+          {body || '(empty body)'}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function ReviewCard({ item, track, onApprove, onReject, onEdit, isActive }) {
   const [expanded, setExpanded] = useState(true)
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(track === 'client' ? item.outreach_email_1 : item.outreach_draft)
 
-  const name = track === 'client'
-    ? `${item.first_name} ${item.last_name}`
-    : item.firm_name
+  const rawDraft = track === 'client' ? item.outreach_email_1 : item.outreach_draft
+  const parsed = parseJson(rawDraft)
 
+  const email1 = track === 'client' ? parsed : parsed?.email_1
+  const email2 = track === 'client' ? parseJson(item.outreach_email_2) : parsed?.email_2
+
+  const recipientTo = track === 'client'
+    ? (item.email || null)
+    : item.contact_email
+      ? (item.contact_name ? `${item.contact_name} <${item.contact_email}>` : item.contact_email)
+      : (item.contact_name || null)
+
+  const [editSubject, setEditSubject] = useState(email1?.subject || '')
+  const [editBody, setEditBody] = useState(email1?.body || '')
+
+  const name = track === 'client' ? `${item.first_name} ${item.last_name}` : item.firm_name
   const subtitle = track === 'client' ? item.title : `Tier ${item.tier}`
 
   function handleEdit() {
     if (editing) {
-      onEdit?.(item.id, draft)
+      const updated = track === 'client'
+        ? JSON.stringify({ subject: editSubject, body: editBody })
+        : JSON.stringify({ email_1: { subject: editSubject, body: editBody }, email_2: parsed?.email_2 || {} })
+      onEdit?.(item.id, updated)
       setEditing(false)
     } else {
+      setEditSubject(email1?.subject || '')
+      setEditBody(email1?.body || '')
       setEditing(true)
     }
   }
@@ -52,51 +100,57 @@ export function ReviewCard({ item, track, onApprove, onReject, onEdit, isActive 
             </div>
           )}
 
-          <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">
-            {editing ? 'Editing Draft' : 'Outreach Draft'}
-          </div>
           {editing ? (
-            <textarea
-              className="w-full bg-navy border border-accent/40 rounded p-3 text-xs text-gray-200 font-data leading-relaxed focus:outline-none resize-none"
-              rows={10}
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-            />
+            <div className="space-y-2 mb-3">
+              <div className="text-xs text-gray-500 uppercase tracking-wider">Editing Email 1</div>
+              <div className="flex gap-2 items-center">
+                <span className="text-xs text-gray-600 w-14 shrink-0">Subject</span>
+                <input
+                  className="flex-1 bg-navy border border-accent/40 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none"
+                  value={editSubject}
+                  onChange={e => setEditSubject(e.target.value)}
+                />
+              </div>
+              <textarea
+                className="w-full bg-navy border border-accent/40 rounded p-3 text-xs text-gray-200 font-data leading-relaxed focus:outline-none resize-none"
+                rows={10}
+                value={editBody}
+                onChange={e => setEditBody(e.target.value)}
+              />
+            </div>
           ) : (
-            <div className="bg-navy rounded p-3 text-xs text-gray-300 whitespace-pre-wrap font-data leading-relaxed">
-              {draft || <span className="text-gray-600">No draft yet</span>}
+            <div>
+              <EmailBlock
+                label={email2 ? 'Email 1' : undefined}
+                to={recipientTo}
+                subject={email1?.subject}
+                body={email1?.body}
+              />
+              {email2 && (
+                <EmailBlock
+                  label="Email 2"
+                  to={recipientTo}
+                  subject={email2.subject}
+                  body={email2.body}
+                />
+              )}
+              {!email1 && (
+                <div className="bg-navy rounded p-3 text-xs text-gray-600">No draft yet</div>
+              )}
             </div>
           )}
 
           <div className="flex gap-2 mt-3">
-            <Button
-              variant="success"
-              size="sm"
-              onClick={() => onApprove?.(item.id)}
-              disabled={IS_PRODUCTION}
-            >
+            <Button variant="success" size="sm" onClick={() => onApprove?.(item.id)}>
               <Check size={13} /> Approve
             </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => onReject?.(item.id)}
-              disabled={IS_PRODUCTION}
-            >
+            <Button variant="danger" size="sm" onClick={() => onReject?.(item.id)}>
               <X size={13} /> Reject
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEdit}
-              disabled={IS_PRODUCTION}
-            >
+            <Button variant="outline" size="sm" onClick={handleEdit}>
               <Pencil size={13} /> {editing ? 'Save' : 'Edit'}
             </Button>
           </div>
-          {IS_PRODUCTION && (
-            <p className="text-xs text-gray-600 mt-2">Read-only — approvals require local access</p>
-          )}
         </div>
       )}
     </div>

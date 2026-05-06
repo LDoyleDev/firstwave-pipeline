@@ -1,0 +1,77 @@
+{
+  "name": "Investor Pipeline",
+  "nodes": [
+    {
+      "id": "cron-daily-investor",
+      "name": "Daily 07:30 Mon–Fri",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "custom",
+              "cronExpression": "30 7 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-enrich-investors",
+      "name": "POST /actions/enrich-investors-batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [460, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8001/actions/enrich-investors-batch",
+        "options": {
+          "timeout": 300000
+        }
+      }
+    },
+    {
+      "id": "http-generate-outreach",
+      "name": "POST /actions/generate-investor-outreach-batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8001/actions/generate-investor-outreach-batch",
+        "options": {
+          "timeout": 300000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 07:30 Mon–Fri": {
+      "main": [
+        [
+          {
+            "node": "POST /actions/enrich-investors-batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /actions/enrich-investors-batch": {
+      "main": [
+        [
+          {
+            "node": "POST /actions/generate-investor-outreach-batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "description": "Daily Mon–Fri 07:30: enrich new investor targets (identified → research_needed), then generate outreach drafts (research_needed → ready_to_contact). Both steps are idempotent — only picks up records with no existing enrichment or draft.",
+  "id": "b3f12a88-5c21-4e7b-9d3a-1f8e4c2b7a96"
+}

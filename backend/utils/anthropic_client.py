@@ -107,6 +107,7 @@ def _try_ollama(system_prompt: str, user_message: str, model: str) -> str | None
             json={
                 "model": model,
                 "prompt": f"{system_prompt}\n\n{user_message}" if system_prompt else user_message,
+                "options": {"num_ctx": 16384},
                 "stream": False,
             },
             timeout=_OLLAMA_TIMEOUT,

@@ -200,3 +200,61 @@ def trigger_reengagement() -> dict:
             logger.exception("Re-engagement failed for lead %s", lead_id)
 
     return {"queued": queued, "candidates_found": len(candidates)}
+
+
+@router.post("/enrich-investors-batch")
+def enrich_investors_batch() -> dict:
+    """Enrich all investor targets sitting at 'identified' with no enrichment data yet."""
+    from backend.agents.enrichment import enrich_investor
+    import time
+
+    rows = (
+        supabase.table("investor_targets")
+        .select("*")
+        .eq("pipeline_stage", "identified")
+        .is_("enrichment_data", "null")
+        .order("tier")
+        .execute()
+        .data or []
+    )
+
+    succeeded = 0
+    failed = 0
+    for investor in rows:
+        try:
+            enrich_investor(investor)
+            succeeded += 1
+        except Exception:
+            logger.exception("Enrich failed for investor %s", investor["id"])
+            failed += 1
+        time.sleep(1)
+
+    return {"processed": len(rows), "succeeded": succeeded, "failed": failed}
+
+
+@router.post("/generate-investor-outreach-batch")
+def generate_investor_outreach_batch() -> dict:
+    """Generate outreach drafts for all enriched investor targets that have no draft yet."""
+    from backend.agents.outreach import generate_investor_outreach
+
+    rows = (
+        supabase.table("investor_targets")
+        .select("id")
+        .eq("pipeline_stage", "research_needed")
+        .is_("outreach_draft", "null")
+        .order("tier")
+        .execute()
+        .data or []
+    )
+
+    added = 0
+    failed = 0
+    for row in rows:
+        try:
+            generate_investor_outreach(row["id"])
+            added += 1
+        except Exception:
+            logger.exception("Outreach gen failed for investor %s", row["id"])
+            failed += 1
+
+    return {"processed": len(rows), "added_to_queue": added, "failed": failed}
