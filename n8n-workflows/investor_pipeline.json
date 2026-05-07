@@ -26,7 +26,7 @@
       "position": [460, 300],
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:8001/actions/enrich-investors-batch",
+        "url": "http://127.0.0.1:8001/actions/enrich-investors-batch",
         "options": {
           "timeout": 300000
         }
@@ -40,7 +40,7 @@
       "position": [680, 300],
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:8001/actions/generate-investor-outreach-batch",
+        "url": "http://127.0.0.1:8001/actions/generate-investor-outreach-batch",
         "options": {
           "timeout": 300000
         }

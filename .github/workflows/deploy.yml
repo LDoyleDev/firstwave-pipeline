@@ -13,5 +13,7 @@ jobs:
           cd /home/vybe/firstwave-pipeline
           git pull origin main
           venv/bin/pip install -r requirements.txt -q
+          sudo cp infra/firstwave-backend.service /etc/systemd/system/firstwave-backend.service
+          sudo systemctl daemon-reload
           sudo systemctl restart firstwave-backend
           echo "Deploy complete"

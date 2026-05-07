@@ -1,0 +1,14 @@
+[Unit]
+Description=FirstWave FastAPI Backend
+After=network.target
+
+[Service]
+User=vybe
+WorkingDirectory=/home/vybe/firstwave-pipeline
+ExecStart=/home/vybe/firstwave-pipeline/venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=5
+EnvironmentFile=/home/vybe/firstwave-pipeline/.env
+
+[Install]
+WantedBy=multi-user.target

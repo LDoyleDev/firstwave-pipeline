@@ -10,7 +10,7 @@ function hash(s) {
 }
 
 export function PasswordGate({ children }) {
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168') || window.location.hostname.endsWith('.ts.net')
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168') || window.location.hostname.startsWith('100.') || window.location.hostname.endsWith('.ts.net')
   const [authed, setAuthed] = useState(() => isLocal || localStorage.getItem(KEY) === hash(PASS))
   const [val, setVal] = useState('')
   const [err, setErr]  = useState(false)
