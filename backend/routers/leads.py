@@ -27,6 +27,8 @@ class LeadUpdate(BaseModel):
     warmth: Optional[str] = None
     notes: Optional[str] = None
     outreach_approved: Optional[bool] = None
+    outreach_email_1: Optional[str] = None
+    outreach_email_2: Optional[str] = None
     next_action_at: Optional[str] = None
 
 
