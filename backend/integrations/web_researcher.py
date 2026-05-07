@@ -119,7 +119,7 @@ def scrape_website_text(url: str, max_chars: int = 2500) -> str:
 def search_web(query: str, max_results: int = 5) -> list[dict]:
     """Search DuckDuckGo and return list of {title, href, body} results."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         results = DDGS().text(query, max_results=max_results)
         return results or []
     except Exception as e:
