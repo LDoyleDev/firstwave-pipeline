@@ -1,5 +1,7 @@
 """Actions router — trigger pipeline operations from the dashboard or n8n."""
+import json
 import logging
+import re
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -244,6 +246,54 @@ def enrich_investors_batch() -> dict:
         time.sleep(1)
 
     return {"processed": len(rows), "succeeded": succeeded, "failed": failed}
+
+
+@router.post("/resolve-placeholders/{investor_id}")
+def resolve_investor_placeholders(investor_id: str) -> dict:
+    """Resolve [placeholder] patterns in an existing investor outreach draft via web search."""
+    from backend.agents.outreach import resolve_draft_placeholders
+
+    row = (
+        supabase.table("investor_targets")
+        .select("*")
+        .eq("id", investor_id)
+        .single()
+        .execute()
+        .data
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Investor not found")
+
+    raw_draft = row.get("outreach_draft")
+    if not raw_draft:
+        raise HTTPException(status_code=400, detail="No draft to resolve")
+
+    try:
+        draft = json.loads(raw_draft) if isinstance(raw_draft, str) else raw_draft
+    except Exception:
+        raise HTTPException(status_code=400, detail="Draft is not valid JSON")
+
+    _PLACEHOLDER_RE = re.compile(r'\[([^\]]{3,60})\]')
+    original_text = json.dumps(draft)
+    placeholders_found = _PLACEHOLDER_RE.findall(original_text)
+    if not placeholders_found:
+        return {"updated": False, "message": "No placeholders found"}
+
+    email_1 = draft.get("email_1", {})
+    email_2 = draft.get("email_2", {})
+    email_1["body"] = resolve_draft_placeholders(email_1.get("body", ""), row)
+    email_2["body"] = resolve_draft_placeholders(email_2.get("body", ""), row)
+
+    updated = json.dumps({"email_1": email_1, "email_2": email_2})
+    supabase.table("investor_targets").update({"outreach_draft": updated}).eq("id", investor_id).execute()
+    logger.info("Placeholders resolved for investor %s", investor_id)
+
+    remaining = _PLACEHOLDER_RE.findall(updated)
+    return {
+        "updated": True,
+        "placeholders_found": placeholders_found,
+        "placeholders_remaining": remaining,
+    }
 
 
 @router.post("/generate-investor-outreach-batch")

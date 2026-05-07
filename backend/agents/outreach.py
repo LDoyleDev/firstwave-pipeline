@@ -1,6 +1,8 @@
 import json
 import logging
+import re
 from backend.integrations.supabase_client import supabase
+from backend.integrations.web_researcher import search_web
 from backend.utils.anthropic_client import classify, generate
 from backend.prompts.system_prompts import (
     CLIENT_OUTREACH_SYSTEM_PROMPT,
@@ -21,6 +23,61 @@ def _parse_outreach_json(raw: str, entity_id: str) -> dict:
         except json.JSONDecodeError:
             logger.error("Failed to parse outreach JSON for %s: %s", entity_id, raw[:200])
             return {"error": "parse_failed", "raw": raw[:1000]}
+
+
+_PLACEHOLDER_RE = re.compile(r'\[([^\]]{3,60})\]')
+
+_PLACEHOLDER_RESOLVER_SYSTEM = (
+    "You are a research assistant. Given a placeholder label, web search results, "
+    "and context about who the email is for, return ONLY the specific short phrase "
+    "that should replace the placeholder — no explanation, no punctuation around it. "
+    "If the search results don't contain a confident answer, return the empty string."
+)
+
+
+def _resolve_placeholder(label: str, investor_context: dict) -> str:
+    """Web-search for a placeholder value and return the replacement string (or '' if not found)."""
+    firm = investor_context.get("firm_name", "")
+    contact = investor_context.get("contact_name", "")
+    query = f'"{firm}" {label} site:linkedin.com OR site:crunchbase.com OR site:pitchbook.com OR "{firm}" {label}'
+    results = search_web(query, max_results=5)
+    if not results:
+        return ""
+
+    snippets = "\n".join(
+        f"- {r.get('title', '')}: {r.get('body', r.get('snippet', ''))}"
+        for r in results
+    )
+    prompt = (
+        f"Placeholder to fill: [{label}]\n"
+        f"Investor: {contact} at {firm}\n"
+        f"Email context: B2B outreach from a hotel AI startup to this investor\n\n"
+        f"Search results:\n{snippets}\n\n"
+        f"Return only the replacement text for [{label}], e.g. a company name, fund name, or specific fact. "
+        f"Keep it concise (2–5 words). If unsure, return empty string."
+    )
+    result = classify(_PLACEHOLDER_RESOLVER_SYSTEM, prompt).strip().strip('"').strip("'")
+    # Reject if the model returned something that looks like a refusal or is too long
+    if len(result) > 80 or result.lower().startswith(("i ", "the search", "based on", "i don")):
+        return ""
+    return result
+
+
+def resolve_draft_placeholders(draft_text: str, investor_context: dict) -> str:
+    """Find all [placeholder] patterns in draft_text and replace with researched values."""
+    placeholders = list(dict.fromkeys(_PLACEHOLDER_RE.findall(draft_text)))  # unique, order-preserving
+    if not placeholders:
+        return draft_text
+
+    for label in placeholders:
+        value = _resolve_placeholder(label, investor_context)
+        if value:
+            logger.info("Resolved [%s] → %s for %s", label, value, investor_context.get("firm_name"))
+            draft_text = draft_text.replace(f"[{label}]", value)
+        else:
+            logger.warning("Could not resolve placeholder [%s] for %s", label, investor_context.get("firm_name"))
+
+    return draft_text
 
 
 def generate_client_outreach(lead_id: str) -> dict:
@@ -102,9 +159,13 @@ def generate_investor_outreach(investor_id: str) -> dict:
     draft = _parse_outreach_json(raw, investor_id)
 
     if "error" not in draft:
+        # Resolve any [placeholder] patterns left by the model before saving
+        email_1_body = resolve_draft_placeholders(draft.get("email_1_body", ""), investor)
+        email_2_body = resolve_draft_placeholders(draft.get("email_2_body", ""), investor)
+
         combined = json.dumps({
-            "email_1": {"subject": draft.get("email_1_subject", ""), "body": draft.get("email_1_body", "")},
-            "email_2": {"subject": draft.get("email_2_subject", ""), "body": draft.get("email_2_body", "")},
+            "email_1": {"subject": draft.get("email_1_subject", ""), "body": email_1_body},
+            "email_2": {"subject": draft.get("email_2_subject", ""), "body": email_2_body},
         })
         new_stage = "ready_to_contact" if investor.get("pipeline_stage") == "research_needed" else investor.get("pipeline_stage")
         supabase.table("investor_targets").update({
