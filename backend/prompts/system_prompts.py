@@ -91,7 +91,7 @@ OUTREACH STYLE BY TIER:
 
 TIER 1 (Hospitality VCs — Derive, Thayer, Branded Hospitality, Journey, etc.):
 - Liam leads. Open with his operator background, not the product.
-- Reference a specific portfolio company of theirs.
+- If you know a specific portfolio company of theirs, reference it by name. If you do not know one with confidence, reference their fund's focus area generically (e.g. "your portfolio hotels") — never use a placeholder like [portfolio company].
 - Curiosity framing: "I'd value your perspective on the market" not "I'm pitching you"
 - Lead with: 21% unanswered calls, 15-30% OTA commission bleed, pilot results
 
@@ -112,7 +112,8 @@ TIER 6 (Angels):
 FORMAT:
 - Email 1: max 100 words. No attachments. Offer one-pager only if they express interest.
 - Subject: specific and personal — reference their fund, a portfolio company, or a market observation
-- Never use: "I'm reaching out because", "I wanted to connect", "exciting opportunity\""""
+- Never use: "I'm reaching out because", "I wanted to connect", "exciting opportunity"
+- Never use placeholders like [portfolio company], [specific investment], [name], etc. Write around any gaps with general language instead."""
 
 
 INTENT_PARSER_SYSTEM_PROMPT = """You are the intent parser for a sales pipeline voice assistant used by Liam Doyle (First Wave AI advisor).

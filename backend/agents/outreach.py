@@ -28,37 +28,49 @@ def _parse_outreach_json(raw: str, entity_id: str) -> dict:
 _PLACEHOLDER_RE = re.compile(r'\[([^\]]{3,60})\]')
 
 _PLACEHOLDER_RESOLVER_SYSTEM = (
-    "You are a research assistant. Given a placeholder label, web search results, "
-    "and context about who the email is for, return ONLY the specific short phrase "
+    "You are a research assistant filling in placeholders in B2B cold email drafts. "
+    "Given a placeholder label and investor context, return ONLY the specific short phrase "
     "that should replace the placeholder — no explanation, no punctuation around it. "
-    "If the search results don't contain a confident answer, return the empty string."
+    "Use your training knowledge about the investor/firm if confident. "
+    "If web search results are provided, prefer them over training knowledge. "
+    "If you cannot find a confident, specific answer, return the empty string. "
+    "Never return a generic placeholder or make something up."
 )
 
 
 def _resolve_placeholder(label: str, investor_context: dict) -> str:
-    """Web-search for a placeholder value and return the replacement string (or '' if not found)."""
+    """Resolve a [placeholder] using Haiku training knowledge + optional web search fallback."""
     firm = investor_context.get("firm_name", "")
     contact = investor_context.get("contact_name", "")
-    query = f'"{firm}" {label} site:linkedin.com OR site:crunchbase.com OR site:pitchbook.com OR "{firm}" {label}'
-    results = search_web(query, max_results=5)
-    if not results:
-        return ""
 
-    snippets = "\n".join(
-        f"- {r.get('title', '')}: {r.get('body', r.get('snippet', ''))}"
-        for r in results
-    )
+    # Try web search first; gracefully handle failures
+    snippets = ""
+    try:
+        query = f'"{firm}" {label}'
+        results = search_web(query, max_results=4)
+        if results:
+            snippets = "\n".join(
+                f"- {r.get('title', '')}: {r.get('body', r.get('snippet', ''))[:200]}"
+                for r in results
+            )
+    except Exception:
+        pass
+
     prompt = (
         f"Placeholder to fill: [{label}]\n"
         f"Investor: {contact} at {firm}\n"
-        f"Email context: B2B outreach from a hotel AI startup to this investor\n\n"
-        f"Search results:\n{snippets}\n\n"
-        f"Return only the replacement text for [{label}], e.g. a company name, fund name, or specific fact. "
-        f"Keep it concise (2–5 words). If unsure, return empty string."
+        f"Context: B2B outreach email from a hotel AI startup (First Wave AI) to this investor\n"
     )
+    if snippets:
+        prompt += f"\nWeb search results:\n{snippets}\n"
+    prompt += (
+        f"\nReturn only the replacement text for [{label}] — e.g. a portfolio company name, "
+        f"fund name, or specific fact (2–6 words). Return empty string if not confident."
+    )
+
     result = classify(_PLACEHOLDER_RESOLVER_SYSTEM, prompt).strip().strip('"').strip("'")
-    # Reject if the model returned something that looks like a refusal or is too long
-    if len(result) > 80 or result.lower().startswith(("i ", "the search", "based on", "i don")):
+    # Reject overly long or evasive responses
+    if not result or len(result) > 80 or result.lower().startswith(("i ", "based on", "i don", "the search", "empty")):
         return ""
     return result
 
