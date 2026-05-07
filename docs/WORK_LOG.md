@@ -25,8 +25,8 @@
 - DuckDuckGo search (`duckduckgo_search` 8.1.1) is currently returning unrelated garbage results regardless of query (likely rate-limiting or locale bug) — marked as known issue, package should be updated to `ddgs`
 - Upstream fix in the prompt is the primary mitigation; Haiku training knowledge is secondary; web search is tertiary
 
-### Known issues
-- `duckduckgo_search` 8.1.1 returns garbage results (ARTE Mediathek etc.) for any query — placeholder web-search fallback is currently non-functional; update to `ddgs` package
+### Post-entry fix
+- **`requirements.txt` + `web_researcher.py`** — `duckduckgo-search` → `ddgs` (package was renamed upstream; 8.1.1 was returning garbage results for all queries). Two-line change, tested against White Star Capital query — 3 correct results returned. Deployed to Pi (PID 317874, 23:03 CEST).
 
 ---
 
