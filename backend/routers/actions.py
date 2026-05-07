@@ -214,6 +214,7 @@ def enrich_investors_batch() -> dict:
         .eq("pipeline_stage", "identified")
         .is_("enrichment_data", "null")
         .order("tier")
+        .limit(5)
         .execute()
         .data or []
     )
