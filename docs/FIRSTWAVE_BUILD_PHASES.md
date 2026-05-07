@@ -9,7 +9,7 @@
 1. Always read `FIRSTWAVE_SYSTEM_CONTEXT.md` before generating any code in this project.
 2. Use the exact system prompts defined in Section 6 of that document. Do not paraphrase or shorten them.
 3. Use the exact Supabase schema from Section 5. Do not invent new table structures.
-4. Every agent that calls the Anthropic API must use `claude-sonnet-4-20250514` for generation and `claude-haiku-4-5-20251001` for classification, as defined in Context Optimisation Rule 7.
+4. Every agent that calls the Anthropic API must use the `SONNET` constant for generation and `HAIKU` constant for classification (both in `backend/utils/anthropic_client.py`), as defined in Context Optimisation Rule 7.
 5. All environment variables come from `.env`. Never hardcode credentials.
 6. Write Python with type hints throughout.
 7. Every FastAPI endpoint must have a docstring explaining its purpose.

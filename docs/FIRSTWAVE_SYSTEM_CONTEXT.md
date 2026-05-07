@@ -95,7 +95,8 @@
 
 ```
 Frontend:     React + Vite (dev: vybe-desktop:5173 · prod: Vercel)
-Backend:      Python 3.12 + FastAPI (port 8001 on vybe-pi, uvicorn --host ::)
+Backend:      Python 3.12 + FastAPI (port 8001 on vybe-pi, uvicorn --host 0.0.0.0)
+              Service file: infra/firstwave-backend.service (committed); deploy.yml copies it + daemon-reload on each deploy
 Database:     Supabase (PostgreSQL, free tier)
 AI:           Ollama first (gpt-oss:20b primary · qwen3:14b local fallback) → Claude Max OAuth fallback
               Ollama on vybe-desktop (100.113.88.92:11434, ROCm/GPU). Falls back to Claude if unreachable.
@@ -106,7 +107,7 @@ Email:        Gmail API via OAuth2 (liam@firstwaveai.com — Google Workspace)
 Calendar:     Google Calendar API via OAuth2
 Scheduling:   Cal.com free tier (API access included, custom availability slots)
 Lead data:    Apollo.io free tier (email enrichment) + PhantomBuster free tier (LinkedIn scraping)
-Automation:   n8n on vybe-pi (port 5678, n8n.service) — workflows target http://localhost:8001
+Automation:   n8n on vybe-pi (port 5678, n8n.service) — workflows target http://127.0.0.1:8001 (explicit IPv4; localhost resolves to ::1 in Node)
 Hosting:      vybe-pi (always-on, Cloudflare Tunnel → firstwave.vybe-dev.com); vybe-desktop for dev
               Tailscale IPs: desktop 100.113.88.92, Pi 100.108.149.115
               CI/CD: GitHub Actions runner on Pi, auto-restarts firstwave-backend on push to main
@@ -319,7 +320,7 @@ These rules govern how Claude Code should approach building this system:
 
 6. **Supabase is the single source of truth** — n8n workflows and the FastAPI backend must always write state to Supabase. Never rely on in-memory state for pipeline data.
 
-7. **Haiku for classification, Sonnet for generation** — use `claude-haiku-4-5-20251001` for intent parsing and lead scoring. Use `claude-sonnet-4-20250514` for enrichment, outreach generation, and briefings.
+7. **Haiku for classification, Sonnet for generation** — use the `HAIKU` constant for intent parsing and lead scoring; use `SONNET` for enrichment, outreach generation, and briefings. Both are defined in `backend/utils/anthropic_client.py` as model aliases resolved by Claude Code.
 
 8. **Groq Whisper for all transcription** — do not use any other transcription service. Groq is already configured on the operator's machine.
 

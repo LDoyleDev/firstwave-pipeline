@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.integrations.supabase_client import supabase
+from backend.utils.anthropic_client import ollama_available
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -94,6 +95,10 @@ def discover(body: DiscoverRequest) -> dict:
 @router.post("/enrich-batch")
 def enrich_batch(body: EnrichBatchRequest) -> dict:
     """Enrich the next N discovered leads (max 5)."""
+    if not ollama_available():
+        logger.warning("enrich-batch skipped — Ollama unavailable")
+        return {"skipped": True, "reason": "Ollama unavailable"}
+
     from backend.agents.enrichment import enrich_lead
     from backend.integrations.supabase_client import supabase as sb
     import time
@@ -127,6 +132,10 @@ def enrich_batch(body: EnrichBatchRequest) -> dict:
 @router.post("/generate-outreach-batch")
 def generate_outreach_batch(body: OutreachBatchRequest) -> dict:
     """Generate outreach drafts for enriched leads not yet in review queue."""
+    if not ollama_available():
+        logger.warning("generate-outreach-batch skipped — Ollama unavailable")
+        return {"skipped": True, "reason": "Ollama unavailable"}
+
     from backend.agents.outreach import generate_client_outreach, generate_investor_outreach
 
     if body.track == "client":
@@ -205,6 +214,10 @@ def trigger_reengagement() -> dict:
 @router.post("/enrich-investors-batch")
 def enrich_investors_batch() -> dict:
     """Enrich all investor targets sitting at 'identified' with no enrichment data yet."""
+    if not ollama_available():
+        logger.warning("enrich-investors-batch skipped — Ollama unavailable")
+        return {"skipped": True, "reason": "Ollama unavailable"}
+
     from backend.agents.enrichment import enrich_investor
     import time
 
@@ -236,6 +249,10 @@ def enrich_investors_batch() -> dict:
 @router.post("/generate-investor-outreach-batch")
 def generate_investor_outreach_batch() -> dict:
     """Generate outreach drafts for all enriched investor targets that have no draft yet."""
+    if not ollama_available():
+        logger.warning("generate-investor-outreach-batch skipped — Ollama unavailable")
+        return {"skipped": True, "reason": "Ollama unavailable"}
+
     from backend.agents.outreach import generate_investor_outreach
 
     rows = (

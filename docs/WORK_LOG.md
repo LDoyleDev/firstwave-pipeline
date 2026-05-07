@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-07 (evening) — Ollama guard + session doc fixes
+
+### Built / changed
+- **`backend/utils/anthropic_client.py`** — added `ollama_available()`: hits `/api/tags` with a 5s timeout, returns bool; no model load, pure liveness ping
+- **`backend/routers/actions.py`** — all four batch endpoints (`enrich-batch`, `generate-outreach-batch`, `enrich-investors-batch`, `generate-investor-outreach-batch`) now call `ollama_available()` at entry and return `{"skipped": True, "reason": "Ollama unavailable"}` immediately if Ollama is down; prevents fallthrough to Claude Max CLI
+
+### Root cause this fixes
+- n8n investor pipeline (old 07:30 cron) fired on May 7 morning while Ollama was unreachable (ConnectError to vybe-desktop). Each enrichment attempted 5 Claude Max CLI retries before failing → 199 calls in the 08:xx hour, burning Claude Max quota
+- Re-confirmed from Pi journalctl: `Ollama gpt-oss:20b unavailable (ConnectError)` at 08:22, then `Claude CLI error (attempt 1–5/5)` per investor
+
+### Doc / CLAUDE.md fixes
+- **`docs/WORK_LOG.md`** — backfilled two post-docs commits from earlier in the session: backend 0.0.0.0 rebind, n8n URL fix, PasswordGate Tailscale bypass, cron reschedule
+- **`CLAUDE.md`** — corrected stale Pi infrastructure note: `--host ::` → `--host 0.0.0.0`; added note that service file lives at `infra/firstwave-backend.service` and deploy.yml copies it on each deploy; n8n URLs now `127.0.0.1:8001`
+
+### Known issues / notes
+- Ollama lives on vybe-desktop; if desktop is asleep at 02:00 CET the guard will now silently skip rather than burn Claude Max — next run picks up where it left off (idempotent)
+- Consider adding Ollama auto-wake or a Telegram alert if skip rate increases
+
+---
+
 ## 2026-05-07 — Ollama restoration + investor pipeline full run
 
 ### Built / changed
@@ -20,6 +40,12 @@
 ### Usage investigation
 - Diagnosed Claude Max usage limit hit: vybe-trading pipeline burned ~1.5M tokens (Sonnet) between 16:00–19:00 on May 6 (191 calls in the 18:00 hour alone); limit still in rolling window when enrichment batch ran at 08:55
 - Claude Code local session data parsed from JSONL files in `~/.claude/projects/`
+
+### Post-docs changes (same session, after log commit)
+- **Backend re-bound to `0.0.0.0`** — `infra/firstwave-backend.service` added to repo (`--host 0.0.0.0 --port 8001`); `deploy.yml` updated to `cp` the service file and `systemctl daemon-reload` on each deploy so Pi always tracks the committed version. Previous `--host ::` (IPv6-only) was refusing Tailscale IPv4 connections from the desktop frontend.
+- **n8n workflow URLs** — all 6 workflows changed from `http://localhost:8001` → `http://127.0.0.1:8001` (explicit IPv4 loopback; `0.0.0.0` doesn't bind on `::1` so n8n's Node IPv6-first resolution would break)
+- **`frontend/src/PasswordGate.jsx`** — bypass auth gate for `100.*` (Tailscale CGNAT range) so Tailscale access works without password prompt
+- **Investor pipeline cron rescheduled 07:30 → 02:00 CET** — overnight run avoids Ollama GPU contention with vybe-trading (which owns 07:00–22:00 CET); n8n workflow updated via API and JSON definition updated
 
 ### Blockers / known issues
 - Apollo account deactivated (401 on every call) — enrichment runs on web search only; upgrade or replace needed for contact email discovery

@@ -120,6 +120,15 @@ def _try_ollama(system_prompt: str, user_message: str, model: str) -> str | None
         return None
 
 
+def ollama_available() -> bool:
+    """Return True if the Ollama host is reachable (fast ping, no model load)."""
+    try:
+        resp = httpx.get(f"{OLLAMA_HOST}/api/tags", timeout=5.0)
+        return resp.status_code == 200
+    except Exception:
+        return False
+
+
 def _try_ollama_with_fallback(system_prompt: str, user_message: str) -> str | None:
     """Try gpt-oss:20b first, fall back to qwen3:14b before escalating to Claude."""
     result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
