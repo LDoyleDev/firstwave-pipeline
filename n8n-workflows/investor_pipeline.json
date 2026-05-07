@@ -3,7 +3,7 @@
   "nodes": [
     {
       "id": "cron-daily-investor",
-      "name": "Daily 07:30 Mon–Fri",
+      "name": "Daily 02:00 Mon–Fri",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [240, 300],
@@ -12,7 +12,7 @@
           "item": [
             {
               "mode": "custom",
-              "cronExpression": "30 7 * * 1-5"
+              "cronExpression": "0 2 * * 1-5"
             }
           ]
         }
@@ -48,7 +48,7 @@
     }
   ],
   "connections": {
-    "Daily 07:30 Mon–Fri": {
+    "Daily 02:00 Mon–Fri": {
       "main": [
         [
           {
@@ -72,6 +72,6 @@
     }
   },
   "active": true,
-  "description": "Daily Mon–Fri 07:30: enrich new investor targets (identified → research_needed), then generate outreach drafts (research_needed → ready_to_contact). Both steps are idempotent — only picks up records with no existing enrichment or draft.",
+  "description": "Daily Mon–Fri 02:00 CET: enrich new investor targets (identified → research_needed), then generate outreach drafts (research_needed → ready_to_contact). Runs overnight to avoid Ollama contention with vybe-trading (which owns 07:00–22:00 CET). Both steps are idempotent.",
   "id": "b3f12a88-5c21-4e7b-9d3a-1f8e4c2b7a96"
 }
