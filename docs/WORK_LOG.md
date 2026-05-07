@@ -2,6 +2,42 @@
 
 ---
 
+## 2026-05-07 — Ollama restoration + investor pipeline full run
+
+### Built / changed
+- **Ollama restored** — Docker container (`ollama/ollama:rocm`) was dead since ~22:00 previous night (crashed on a 30s inference timeout, no restart policy). Snap Ollama had auto-started in its place but was sandboxed to `127.0.0.1` and couldn't read Docker volume models. Fix: disabled snap service, restarted Docker container with `--restart=unless-stopped`, `OLLAMA_HOST=0.0.0.0`, `OLLAMA_KEEP_ALIVE=-1`, `OLLAMA_ORIGINS=*`. All 4 models restored: `gpt-oss:20b`, `qwen3:14b`, `qwen3-coder:30b`, `llama3.2:3b` (41GB in Docker volume, no re-download needed)
+- **`backend/agents/enrichment.py`** — switched both `enrich_lead` and `enrich_investor` from Sonnet default to Haiku; fixed `TypeError` in `enrich_investor` name-parsing (splat of `("", [])` fallback put `[]` into `*rest`); imported `HAIKU` constant
+- **`backend/utils/anthropic_client.py`** — `_call_cli` now captures `result.stdout` when `stderr` is empty, so Claude Max usage-limit messages are visible in logs
+- **`backend/routers/actions.py`** — capped `enrich-investors-batch` at 5 per call (was unbounded, always Cloudflare-timeout through tunnel)
+- **Pi service restart** — stale Apr29 uvicorn process (PID 1769808) was still serving after May 6 deploy; killed it, systemd restarted with new code
+- **Snap Ollama permanently disabled** — `snap.ollama.listener.service` disabled to prevent port 11434 conflicts after reboot
+
+### Investor pipeline — full run completed
+- Enriched all 100 investors via `gpt-oss:20b` local Ollama: 93/100 valid fit scores (35–90), 7 JSON parse failures (zero score but still moved forward)
+- Generated outreach drafts for all 100 investors: 100/100 in `ready_to_contact`
+- Zero Claude Max quota consumed — entire run was local GPU inference
+
+### Usage investigation
+- Diagnosed Claude Max usage limit hit: vybe-trading pipeline burned ~1.5M tokens (Sonnet) between 16:00–19:00 on May 6 (191 calls in the 18:00 hour alone); limit still in rolling window when enrichment batch ran at 08:55
+- Claude Code local session data parsed from JSONL files in `~/.claude/projects/`
+
+### Blockers / known issues
+- Apollo account deactivated (401 on every call) — enrichment runs on web search only; upgrade or replace needed for contact email discovery
+- 7 investor enrichments have zero fit score (Ollama returned non-JSON); outreach still generated for these
+- `duckduckgo_search` package renamed to `ddgs` — warning on every web search call; non-blocking but should update dependency
+
+### Current pipeline state
+- 100 investors: all in `ready_to_contact` with outreach drafts, awaiting approval in review queue
+- 57 client leads: still in `review_queue` awaiting approval
+- 53 client leads: in `discovered`, not yet enriched
+
+### Next
+- Review and approve investor outreach drafts in dashboard
+- Review and approve client lead drafts
+- Consider Apollo upgrade or LinkedIn CSV import to get contact emails
+
+---
+
 ## 2026-05-06 — Investor pipeline automation + lead discovery
 
 ### Built / changed
