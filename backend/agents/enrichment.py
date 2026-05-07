@@ -3,7 +3,7 @@ import logging
 from backend.integrations.supabase_client import supabase
 from backend.integrations.website_checker import check_for_chatbot
 from backend.integrations.web_researcher import apollo_enrich_person, scrape_website_text, search_web
-from backend.utils.anthropic_client import generate
+from backend.utils.anthropic_client import generate, HAIKU
 from backend.prompts.system_prompts import ENRICHMENT_SYSTEM_PROMPT, INVESTOR_ENRICHMENT_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -142,7 +142,7 @@ WEB SEARCH — COMPANY NEWS:
 
 Return valid JSON only — no markdown, no explanation."""
 
-    raw = generate(ENRICHMENT_SYSTEM_PROMPT, user_message)
+    raw = generate(ENRICHMENT_SYSTEM_PROMPT, user_message, model=HAIKU)
 
     try:
         enrichment = json.loads(raw)
@@ -207,8 +207,9 @@ def enrich_investor(investor_data: dict) -> dict:
     contact_linkedin = investor_data.get("contact_linkedin", "")
     website = investor_data.get("website_url", "")
 
-    first, *rest = contact.split(" ") if contact else ("", [])
-    last = " ".join(rest) if rest else ""
+    parts = contact.split(" ") if contact else []
+    first = parts[0] if parts else ""
+    last = " ".join(parts[1:]) if len(parts) > 1 else ""
 
     logger.info("Researching investor contact %s at %s", contact, firm)
 
@@ -269,7 +270,7 @@ WEB SEARCH — FIRM / PORTFOLIO NEWS:
 
 Return valid JSON only — no markdown, no explanation."""
 
-    raw = generate(INVESTOR_ENRICHMENT_SYSTEM_PROMPT, user_message)
+    raw = generate(INVESTOR_ENRICHMENT_SYSTEM_PROMPT, user_message, model=HAIKU)
 
     try:
         enrichment = json.loads(raw)

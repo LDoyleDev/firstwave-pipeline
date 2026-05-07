@@ -82,7 +82,8 @@ def _call_cli(system_prompt: str, user_message: str, model: str) -> str:
                 timeout=120,
             )
             if result.returncode != 0:
-                raise RuntimeError(f"Claude CLI error: {result.stderr[:300]}")
+                detail = (result.stderr or result.stdout or "no output")[:300]
+                raise RuntimeError(f"Claude CLI error: {detail}")
             return result.stdout.strip()
         except subprocess.TimeoutExpired:
             logger.warning("Claude CLI timeout (attempt %d/5)", attempt + 1)
