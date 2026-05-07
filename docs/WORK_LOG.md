@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-05-07 (late evening) — Draft edit fix + placeholder resolver
+
+### Built / changed
+- **`backend/routers/leads.py`** — `LeadUpdate` model was missing `outreach_email_1` and `outreach_email_2` fields; Pydantic was silently dropping them, PATCH returned 400 "No fields to update" → frontend edit appeared to save then snapped back. Fixed by adding both fields to the model.
+- **`backend/agents/outreach.py`** — added `resolve_draft_placeholders()` and `_resolve_placeholder()`: after outreach generation, scans for `[label]` patterns, attempts Haiku training-knowledge lookup + DuckDuckGo web search fallback per placeholder, substitutes the resolved value or leaves the text unchanged if not found
+- **`backend/routers/actions.py`** — added `POST /actions/resolve-placeholders/{investor_id}` endpoint to fix existing drafts without full regeneration
+- **`backend/prompts/system_prompts.py`** — `INVESTOR_OUTREACH_SYSTEM_PROMPT` updated: Tier 1 rule changed from "Reference a specific portfolio company" to "only reference one if you know it with confidence, otherwise use generic language"; FORMAT rule added banning `[placeholder]` syntax entirely
+
+### Existing drafts fixed in DB (direct Supabase update)
+- Mihir Karkare / Howzat Partners → `[portfolio company]` → "your portfolio hotels" (Haiku/search couldn't find portfolio; generic fallback used)
+- Eric Martineau-Fortin / White Star Capital → `[portfolio company]` → "Fathom" (Haiku knew this one)
+- Bessemer Venture Partners (EU) → `[Name]` → "the team" (no contact name in DB)
+- Atlantic Labs → `[Name]` → "the team" (no contact name in DB)
+- AngelList Hospitality Syndicates → `[Investor]` → "there" (generic contact)
+- 0 placeholders remain across all 100 investor drafts
+
+### Root cause of draft-edit bug
+- `LeadUpdate` Pydantic model only had `pipeline_stage`, `lead_score`, `warmth`, `notes`, `outreach_approved`, `next_action_at` — no outreach fields. Frontend `onEdit` sends `{ outreach_email_1: draft }`, Pydantic dropped it silently, backend raised 400, React Query mutation failed silently, card reverted.
+
+### Root cause of placeholders
+- DuckDuckGo search (`duckduckgo_search` 8.1.1) is currently returning unrelated garbage results regardless of query (likely rate-limiting or locale bug) — marked as known issue, package should be updated to `ddgs`
+- Upstream fix in the prompt is the primary mitigation; Haiku training knowledge is secondary; web search is tertiary
+
+### Known issues
+- `duckduckgo_search` 8.1.1 returns garbage results (ARTE Mediathek etc.) for any query — placeholder web-search fallback is currently non-functional; update to `ddgs` package
+
+---
+
 ## 2026-05-07 (evening) — Ollama guard + session doc fixes
 
 ### Built / changed
