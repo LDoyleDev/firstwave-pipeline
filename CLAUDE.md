@@ -28,6 +28,7 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 |---------|-------------|------|
 | vybe-desktop | 100.113.88.92 | Dev machine |
 | vybe-pi | 100.108.149.115 | Always-on server (firstwave-backend on 8001) |
+| surface-pro-3 | 100.120.7.102 | Travel laptop — dev only, no production services |
 
 ## Pi infrastructure
 - **Cloudflare Tunnel:** single tunnel (`7c973a7f-c739-48b2-9acf-ebc5b7f4a387`) with two ingress rules:
