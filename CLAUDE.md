@@ -10,7 +10,7 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 - Backend: Python 3.12 + FastAPI
 - Frontend: React + Vite (dev: port 5173 · prod: Vercel)
 - Database: Supabase (PostgreSQL) — single source of truth
-- AI: Ollama first (gpt-oss:20b primary · qwen3:14b local fallback) → Claude Max OAuth fallback (read from ~/.claude/.credentials.json)
+- AI: Ollama first (gpt-oss:20b only) → Claude Max OAuth fallback (read from ~/.claude/.credentials.json)
 - Voice: Telegram bot + Groq Whisper transcription
 - Automation: n8n (localhost:5678)
 - Remote access: Tailscale

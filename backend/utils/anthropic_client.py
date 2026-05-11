@@ -18,7 +18,6 @@ HAIKU = "haiku"  # most efficient for classification and intent parsing
 # Local Ollama inference (vybe-desktop over Tailscale)
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://100.113.88.92:11434")
 _OLLAMA_PRIMARY = "gpt-oss:20b"   # primary for all tasks — strongest reasoning, 131k context
-_OLLAMA_FALLBACK = "qwen3:14b"    # local fallback if gpt-oss unavailable
 _OLLAMA_TIMEOUT = 120.0
 
 _CLAUDE_BIN = str(Path.home() / ".local" / "bin" / "claude")
@@ -129,17 +128,9 @@ def ollama_available() -> bool:
         return False
 
 
-def _try_ollama_with_fallback(system_prompt: str, user_message: str) -> str | None:
-    """Try gpt-oss:20b first, fall back to qwen3:14b before escalating to Claude."""
-    result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
-    if result is not None:
-        return result
-    return _try_ollama(system_prompt, user_message, _OLLAMA_FALLBACK)
-
-
 def generate(system_prompt: str, user_message: str, model: str = SONNET) -> str:
-    """Generate a response — Ollama first (gpt-oss → qwen3 → Claude)."""
-    result = _try_ollama_with_fallback(system_prompt, user_message)
+    """Generate a response — Ollama first (gpt-oss → Claude)."""
+    result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
     if result is not None:
         return result
     if os.getenv("ANTHROPIC_API_KEY", "").strip():
@@ -148,8 +139,8 @@ def generate(system_prompt: str, user_message: str, model: str = SONNET) -> str:
 
 
 def classify(system_prompt: str, user_message: str) -> str:
-    """Classify — Ollama first (gpt-oss → qwen3 → Claude Haiku)."""
-    result = _try_ollama_with_fallback(system_prompt, user_message)
+    """Classify — Ollama first (gpt-oss → Claude Haiku)."""
+    result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
     if result is not None:
         return result
     if os.getenv("ANTHROPIC_API_KEY", "").strip():
