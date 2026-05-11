@@ -1,6 +1,43 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-11 — Session: credential hygiene + gitleaks pre-commit
+
+### Changed
+- `.pre-commit-config.yaml` — added gitleaks v8.30.1 hook to block accidental commits of API tokens / credentials (commit `0d06b1d`).
+- `.github/workflows/deploy.yml` — changed `sudo cp` step to use the absolute source path so vybe-pi's sudoers NOPASSWD rule matches argv verbatim (commit `77d02bb`). Pattern mirrors vybe-trading's deploy.yml.
+
+### Off-repo infrastructure (vybe-pi)
+- Generated dedicated SSH deploy key `~/.ssh/id_ed25519_firstwave` on vybe-pi. The pre-existing `id_ed25519` is already registered as a deploy key for vybe-trading, and GitHub disallows reusing a single key across repos.
+- Added `Host github-firstwave` block to `~/.ssh/config` on vybe-pi pointing the new key at `github.com`.
+- Reset `~/firstwave-pipeline/.git/config` remote to `git@github-firstwave:LDoyleDev/firstwave-pipeline.git` — replaces a `https://LDoyleDev:<PAT>@github.com/...` URL that had a GitHub PAT embedded in plaintext.
+- Same SSH switch applied to `~/firstwave-pipeline/.git/config` on vybe-desktop (uses the existing LDoyleDev user-level SSH key — no separate deploy key needed since vybe-desktop authenticates as the account).
+- Installed `/etc/sudoers.d/firstwave-deploy` on vybe-pi (0440 root:root) with NOPASSWD entries matching deploy.yml argv: `/usr/bin/cp <absolute path> /etc/systemd/system/firstwave-backend.service`, `/usr/bin/systemctl daemon-reload`, `/usr/bin/systemctl restart firstwave-backend`. Removed stale `/etc/sudoers.d/firstwave` (referenced renamed `firstwave-api` service, had loose 644 perms which visudo rejected).
+
+### Credential remediation
+- Removed `GITHUB_REPO_TOKEN` from `~/firstwave-pipeline/.env` on vybe-desktop and vybe-pi. No source file referenced it; the only consumer was the git remote URL, now SSH.
+- Revoked 3 stale GitHub PATs on the account.
+- Scrubbed leaked token strings from `~/.bash_history` on vybe-pi (2 occurrences → `[REVOKED_PAT]`).
+- Scrubbed leaked token strings from 7 Claude data files on vybe-desktop (2 `~/.claude/file-history/` snapshots + 5 `~/.claude/projects/*.jsonl` session transcripts, 8 occurrences total → `[REVOKED_PAT]`).
+
+### Validation
+| Check | Result |
+|---|---|
+| `gitleaks` pre-commit run across full tracked tree | passed (no pre-existing secrets) |
+| `ssh -T git@github-firstwave` from vybe-pi | `Hi LDoyleDev/firstwave-pipeline!` ✓ |
+| Deploy workflow on push of `77d02bb` (GitHub run 25684602593) | success — git pull, pip install, sudo cp, daemon-reload, systemctl restart all green |
+| `systemctl is-active firstwave-backend` post-deploy | `active` (PID 166235, ActiveEnterTimestamp 2026-05-11 18:57:38 CEST) |
+| `curl https://firstwave.vybe-dev.com/health` | `200` |
+
+### Known issues / notes
+- ~20 other secrets in `~/firstwave-pipeline/.env` (Supabase ANON + SERVICE_ROLE keys, Telegram bot token, Groq, Google OAuth client secret + refresh token, Cal.com, Apollo, PhantomBuster, Gmail sender) are likely cached in older `~/.claude/file-history/` + `~/.claude/projects/*.jsonl` files on vybe-desktop from prior sessions that read `.env`. Separate rotation cycle planned for the most sensitive (`SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_REFRESH_TOKEN`, `TELEGRAM_BOT_TOKEN`).
+- The deploy workflow had been failing silently for 3 prior runs before today's fix — `firstwave-backend.service` remained running across the failures because none of them touched the systemd unit successfully, so the deploy was effectively a no-op for the live service.
+
+### Next
+- Rotate remaining firstwave credentials per sensitivity priority (separate session).
+
+---
+
 
 ## 2026-05-07 (late evening) — Draft edit fix + placeholder resolver
 
