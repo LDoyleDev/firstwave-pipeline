@@ -1,8 +1,13 @@
+import json
 import os
 import subprocess
 import time
+import uuid
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
+
 import httpx
 from anthropic import Anthropic, APIError, RateLimitError, APIConnectionError
 from dotenv import load_dotenv
@@ -25,6 +30,74 @@ _CREDENTIALS_PATH = Path.home() / ".claude" / ".credentials.json"
 
 # Direct SDK client — only used when ANTHROPIC_API_KEY is explicitly set
 _sdk_client: Anthropic | None = None
+
+
+# ---------------------------------------------------------------------------
+# Telemetry — pushes one record per generate()/classify() call to shared
+# Redis sorted set (same key as vybe-trading's llm_router)
+# ---------------------------------------------------------------------------
+
+_fw_redis: Any = None
+_LLM_CALLS_KEY = "llm:calls"
+_LLM_CALLS_MAX = 10_000
+
+
+def _get_fw_redis() -> Any:
+    global _fw_redis
+    if _fw_redis is None:
+        try:
+            import redis as _rc  # noqa: PLC0415
+            _fw_redis = _rc.from_url(
+                os.getenv("REDIS_URL", "redis://127.0.0.1:6379"),
+                socket_connect_timeout=1,
+                socket_timeout=1,
+            )
+        except Exception:
+            pass
+    return _fw_redis
+
+
+def _emit_fw_call(
+    fn_name: str,
+    provider: str,
+    model: str,
+    latency_ms: int,
+    ok: bool,
+    error: str | None = None,
+) -> None:
+    """Push firstwave LLM call record to shared llm:calls sorted set. Never raises."""
+    try:
+        r = _get_fw_redis()
+        if r is None:
+            return
+        now = datetime.now(UTC)
+        record: dict[str, Any] = {
+            "id": str(uuid.uuid4())[:8],
+            "ts": now.isoformat(),
+            "ts_unix": now.timestamp(),
+            "source": "firstwave",
+            "caller": fn_name,
+            "model_hint": fn_name,
+            "force_quality": False,
+            "attempts": [{"provider": provider, "model": model,
+                           "latency_ms": latency_ms, "ok": ok, "error": error}],
+            "winner": provider if ok else None,
+            "winner_model": model if ok else None,
+            "total_latency_ms": latency_ms,
+            "ok": ok,
+        }
+        member = json.dumps(record, separators=(",", ":"))
+        pipe = r.pipeline()
+        pipe.zadd(_LLM_CALLS_KEY, {member: now.timestamp()})
+        pipe.zremrangebyrank(_LLM_CALLS_KEY, 0, -(_LLM_CALLS_MAX + 1))
+        pipe.execute()
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Anthropic SDK / CLI helpers
+# ---------------------------------------------------------------------------
 
 
 def _get_sdk_client() -> Anthropic:
@@ -128,21 +201,65 @@ def ollama_available() -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
 def generate(system_prompt: str, user_message: str, model: str = SONNET) -> str:
     """Generate a response — Ollama first (gpt-oss → Claude)."""
+    t0 = time.monotonic()
     result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
     if result is not None:
+        _emit_fw_call("generate", "ollama", _OLLAMA_PRIMARY,
+                      int((time.monotonic() - t0) * 1000), ok=True)
         return result
-    if os.getenv("ANTHROPIC_API_KEY", "").strip():
-        return _call_sdk(system_prompt, user_message, model)
-    return _call_cli(system_prompt, user_message, model)
+    _emit_fw_call("generate", "ollama", _OLLAMA_PRIMARY,
+                  int((time.monotonic() - t0) * 1000), ok=False)
+
+    t1 = time.monotonic()
+    use_sdk = bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+    provider = "sdk" if use_sdk else "cli"
+    try:
+        if use_sdk:
+            out = _call_sdk(system_prompt, user_message, model)
+        else:
+            out = _call_cli(system_prompt, user_message, model)
+        _emit_fw_call("generate", provider, model,
+                      int((time.monotonic() - t1) * 1000), ok=True)
+        return out
+    except Exception as exc:
+        _emit_fw_call("generate", provider, model,
+                      int((time.monotonic() - t1) * 1000), ok=False,
+                      error=type(exc).__name__)
+        raise
 
 
 def classify(system_prompt: str, user_message: str) -> str:
     """Classify — Ollama first (gpt-oss → Claude Haiku)."""
+    t0 = time.monotonic()
     result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
     if result is not None:
+        _emit_fw_call("classify", "ollama", _OLLAMA_PRIMARY,
+                      int((time.monotonic() - t0) * 1000), ok=True)
         return result
-    if os.getenv("ANTHROPIC_API_KEY", "").strip():
-        return _call_sdk(system_prompt, user_message, HAIKU)
-    return _call_cli(system_prompt, user_message, HAIKU)
+    _emit_fw_call("classify", "ollama", _OLLAMA_PRIMARY,
+                  int((time.monotonic() - t0) * 1000), ok=False)
+
+    t1 = time.monotonic()
+    use_sdk = bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+    provider = "sdk" if use_sdk else "cli"
+    model = HAIKU
+    try:
+        if use_sdk:
+            out = _call_sdk(system_prompt, user_message, model)
+        else:
+            out = _call_cli(system_prompt, user_message, model)
+        _emit_fw_call("classify", provider, model,
+                      int((time.monotonic() - t1) * 1000), ok=True)
+        return out
+    except Exception as exc:
+        _emit_fw_call("classify", provider, model,
+                      int((time.monotonic() - t1) * 1000), ok=False,
+                      error=type(exc).__name__)
+        raise
