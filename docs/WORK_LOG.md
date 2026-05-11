@@ -1,6 +1,58 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-11 (continued) — Session: full credential rotation + cache scrub
+
+Same date, second wrap. Continues from the earlier entry (credential hygiene + gitleaks + SSH switch).
+
+### Credentials rotated (manual at provider; .env updated on vybe-desktop and vybe-pi; service restarted; verified end-to-end)
+
+| Credential | Verification |
+|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | `GET /investors` via local 8001 returned 100 rows under the new key. Pre-restart logs showed `Unregistered API key` errors confirming the old key was atomically invalidated by the Supabase "Reset" action. |
+| `GOOGLE_REFRESH_TOKEN` + `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | Full OAuth re-flow via new Desktop-type OAuth client. Used `scripts/get_google_token.py` over an SSH port-forward (`ssh -L 8080:localhost:8080 vybe@vybe-desktop`) because vybe-desktop is headless. First refresh attempt failed with `unauthorized_client` — diagnosed via a leak-safe diff against `~/.secrets/firstwave/google-credentials.json` that `.env` had retained the old `client_id`/`client_secret` while only `refresh_token` was updated. Programmatically synced all 3 vars from JSON → vybe-desktop .env → vybe-pi .env, then `creds.refresh()` succeeded on both machines. Old OAuth client deleted at Cloud Console after verification. |
+| `TELEGRAM_BOT_TOKEN` | Revoked + reissued via @BotFather (atomic). Service restart logs clean, no 401/Telegram errors. |
+
+### Claude data cache scrub (vybe-desktop)
+
+Past sessions had cached `~/firstwave-pipeline/.env` plaintext into Claude's data store. Once provider-side credentials were revoked, the leaked copies were inert but still ugly. Pattern-replaced with `[REVOKED_*]` placeholders across:
+
+- `~/.claude/file-history/<session>/<file>@vN` — 2 pre-existing snapshots scrubbed
+- `~/.claude/projects/*.jsonl` — 16 session transcripts scrubbed
+- `~/.claude/paste-cache/<id>.txt` — 1 paste-cache entry
+- `~/.bash_history` on **vybe-pi** — 2 token strings
+
+Patterns scrubbed: `ghp_[A-Za-z0-9]{36}`, `github_pat_[A-Za-z0-9_]+`, `GOCSPX-[A-Za-z0-9_-]+`, `1//[0-9A-Za-z_-]{40,}` (Google refresh), `[0-9]{8,12}:AA[A-Za-z0-9_-]{30,}` (Telegram bot), and Supabase-shaped JWTs (`eyJ.<base64>.eyJpc3MiOiJzdXBhYmFzZSI...` + broader 3-segment JWT-shaped scrub on a small whitelist of files known to contain them).
+
+Final cross-pattern sweep on `~/.claude/`: zero credential-shaped strings remain. Only `ghp_` matches now are in the Claude Code VS Code extension's bundled regex on surface-pro-3 (`ghp_[0-9a-zA-Z]{36}` pattern literal — it's the detector, not a credential).
+
+### CLAUDE.md touch on surface-pro-3
+
+`docs(claude-md): add surface-pro-3 to machines table` (`03221b8`). Pre-existing local edit on the sp3 clone, surfaced + landed during the post-pull rebase. Deploy run `25692886386` succeeded.
+
+### Saved memories (apply across future sessions)
+
+- `feedback_credential_file_reads.md` — don't Read/cat `.env` or secrets files in full during a Claude session. Use `grep -E "^[A-Z_]+=" file | cut -d= -f1` for variable names only, and value-redacting one-liners (`git remote -v | sed -E "s/(ghp_|github_pat_)[A-Za-z0-9_]+/[REDACTED]/g"`) when needed.
+- `feedback_avoid_credential_leaks.md` — three preventive practices: (1) SSH-default for git remotes (no `https://user:TOKEN@github.com/...`); (2) don't store credentials in `.env` if no application code reads them (git auth belongs in SSH/credential helper); (3) gitleaks pre-commit + monthly disk sweep (`grep -rIl 'ghp_\\|github_pat_\\|sk-\\|AKIA' ~ --exclude-dir={.git,node_modules,venv,.venv,.cache}`).
+
+### Validation
+
+| Check | Result |
+|---|---|
+| Final Supabase exercise | `GET /investors` → 200, 100 rows |
+| Final Google OAuth refresh | both machines OK after `.env` sync from JSON |
+| Final Telegram check | restart logs clean |
+| Cross-machine `ghp_\|github_pat_\|GOCSPX-\|1//\|XXXXX:AA\|eyJpc3MiOiJzdXBhYmFzZSI` sweep | `~/.claude/` and `~/firstwave-pipeline/` both CLEAN on vybe-desktop, vybe-pi, surface-pro-3 |
+| firstwave-backend service | active, last restart at 21:22:57 CEST (Telegram rotation), /health 200 |
+| Old Google OAuth client | deleted at Cloud Console; new client `firstwave-2026-05-11` retained |
+
+### Outstanding
+
+- ~17 other secrets in `.env` (Apollo, PhantomBuster, Cal.com, Groq, etc.) were NOT rotated this session. Lower-priority blast radius. Same procedure applies if you choose to rotate them.
+- The remaining credential-rotation memory note (`feedback_credential_file_reads.md`) should keep future sessions from re-seeding the cache with secrets when reading `.env`.
+
+---
+
 ## 2026-05-11 — Session: credential hygiene + gitleaks pre-commit
 
 ### Changed
