@@ -31,6 +31,67 @@ _CREDENTIALS_PATH = Path.home() / ".claude" / ".credentials.json"
 # Direct SDK client — only used when ANTHROPIC_API_KEY is explicitly set
 _sdk_client: Anthropic | None = None
 
+# ---------------------------------------------------------------------------
+# Cross-project coordination — share GPU + Claude Max with vybe-trading
+# ---------------------------------------------------------------------------
+# Both projects share the desktop's Ollama instance and the user's Claude Max
+# account. If firstwave-pipeline fires LLM calls while vybe-trading is in its
+# active window (futures market hours), it queues Ollama requests behind
+# vybe-trading's traders, slowing down setup/thesis/debate agents — and
+# competes for the same Max-account fallback. Gate firstwave to off-hours.
+#
+# Default windows when firstwave LLM calls are allowed (UTC):
+#   - All day Saturday
+#   - Sunday before 22:00 UTC (futures resume at 22:00 UTC = 18:00 ET)
+#   - Daily 21:00–22:00 UTC (CME futures break — vybe-trading is idle then)
+# Override with FIRSTWAVE_LLM_ALWAYS_ALLOW=1 (manual jobs, tests).
+
+_FW_ALWAYS_ALLOW = os.getenv("FIRSTWAVE_LLM_ALWAYS_ALLOW", "").strip() == "1"
+
+# Shared cooloff key — same name vybe-trading writes (data/redis_keys.py
+# CLAUDE_COOLOFF_UNTIL). Value = epoch seconds at which Claude Max resets.
+_CLAUDE_COOLOFF_KEY = "llm:claude:cooloff_until"
+
+
+class VybeTradingWindowError(RuntimeError):
+    """Raised when firstwave tries to call an LLM during vybe-trading's active
+    window. Callers should defer the task (queue / cron retry) rather than
+    swallow this — the work isn't lost, just delayed to off-hours."""
+
+
+def _is_vybe_trading_window(now: datetime | None = None) -> bool:
+    """Return True if vybe-trading is in its active window and firstwave must
+    defer LLM calls. See module docstring for the exact schedule."""
+    if _FW_ALWAYS_ALLOW:
+        return False
+    now = now or datetime.now(UTC)
+    wd = now.weekday()  # 0=Mon … 6=Sun
+    minutes = now.hour * 60 + now.minute
+    # Daily futures break 21:00–22:00 UTC — always allowed.
+    if 21 * 60 <= minutes < 22 * 60:
+        return False
+    if wd == 5:  # Saturday
+        return False
+    if wd == 6 and minutes < 22 * 60:  # Sunday before 22:00 UTC
+        return False
+    return True
+
+
+def _claude_in_cooloff() -> tuple[bool, int]:
+    """Check the shared cooloff key. Returns (in_cooloff, seconds_remaining)."""
+    r = _get_fw_redis()
+    if r is None:
+        return False, 0
+    try:
+        raw = r.get(_CLAUDE_COOLOFF_KEY)
+        if not raw:
+            return False, 0
+        reset_unix = float(raw)
+        remaining = int(reset_unix - time.time())
+        return remaining > 0, max(remaining, 0)
+    except Exception:
+        return False, 0
+
 
 # ---------------------------------------------------------------------------
 # Telemetry — pushes one record per generate()/classify() call to shared
@@ -137,7 +198,16 @@ def _call_sdk(system_prompt: str, user_message: str, model: str) -> str:
 
 
 def _call_cli(system_prompt: str, user_message: str, model: str) -> str:
-    """Claude Code CLI call — uses Claude Max OAuth, no API key needed."""
+    """Claude Code CLI call — uses Claude Max OAuth, no API key needed.
+
+    Gated by the shared cooloff key written by vybe-trading's llm_router:
+    when the Max account is in a limit window, retries here would just burn
+    the same throttle. Raise immediately and let the caller defer."""
+    in_cooloff, wait_s = _claude_in_cooloff()
+    if in_cooloff:
+        raise RuntimeError(
+            f"Claude CLI skipped — Max-limit cooloff active ({wait_s}s left)"
+        )
     for attempt in range(5):
         try:
             result = subprocess.run(
@@ -173,7 +243,12 @@ def _call_cli(system_prompt: str, user_message: str, model: str) -> str:
 
 
 def _try_ollama(system_prompt: str, user_message: str, model: str) -> str | None:
-    """Attempt Ollama completion. Returns None if unreachable or error."""
+    """Attempt Ollama completion. Returns None if unreachable or error.
+
+    `keep_alive=-1` keeps the model pinned in VRAM after the call returns;
+    desktop also sets OLLAMA_KEEP_ALIVE=-1 globally but specifying it
+    per-request survives any container env reset and makes intent explicit.
+    """
     try:
         resp = httpx.post(
             f"{OLLAMA_HOST}/api/generate",
@@ -181,6 +256,7 @@ def _try_ollama(system_prompt: str, user_message: str, model: str) -> str | None
                 "model": model,
                 "prompt": f"{system_prompt}\n\n{user_message}" if system_prompt else user_message,
                 "options": {"num_ctx": 16384},
+                "keep_alive": -1,
                 "stream": False,
             },
             timeout=_OLLAMA_TIMEOUT,
@@ -208,6 +284,11 @@ def ollama_available() -> bool:
 
 def generate(system_prompt: str, user_message: str, model: str = SONNET) -> str:
     """Generate a response — Ollama first (gpt-oss → Claude)."""
+    if _is_vybe_trading_window():
+        raise VybeTradingWindowError(
+            "firstwave LLM call deferred — vybe-trading active window. "
+            "Set FIRSTWAVE_LLM_ALWAYS_ALLOW=1 to override."
+        )
     t0 = time.monotonic()
     result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
     if result is not None:
@@ -237,6 +318,11 @@ def generate(system_prompt: str, user_message: str, model: str = SONNET) -> str:
 
 def classify(system_prompt: str, user_message: str) -> str:
     """Classify — Ollama first (gpt-oss → Claude Haiku)."""
+    if _is_vybe_trading_window():
+        raise VybeTradingWindowError(
+            "firstwave LLM call deferred — vybe-trading active window. "
+            "Set FIRSTWAVE_LLM_ALWAYS_ALLOW=1 to override."
+        )
     t0 = time.monotonic()
     result = _try_ollama(system_prompt, user_message, _OLLAMA_PRIMARY)
     if result is not None:
