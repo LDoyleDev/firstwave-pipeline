@@ -1,6 +1,32 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-13 — Session: trading-hours gate + Claude Max cooloff (cross-project with vybe-trading)
+
+Coordinated change with vybe-trading's ADR-028 to stop the shared Claude Max account from being burned by simultaneous LLM cascades and to keep firstwave from queueing Ollama requests behind trading-critical agents.
+
+### Shipped
+
+- `_is_vybe_trading_window()` added to `backend/utils/anthropic_client.py`. Gates `generate()` and `classify()` to weekends + the daily 21:00–22:00 UTC CME futures break. Raises `VybeTradingWindowError` outside those windows so callers defer cleanly rather than swallow. Override: `FIRSTWAVE_LLM_ALWAYS_ALLOW=1` (for manual jobs / tests only — never in production agents).
+- `_call_cli` now honours the cross-project Redis key `llm:claude:cooloff_until`, written by vybe-trading's `agents/llm_router.py` after parsing the Claude CLI's `"You've hit your limit · resets HH:MM(am|pm) (TZ)"` stdout. Short-circuits the CLI invocation while the Max account is in cooloff so firstwave doesn't double-burn the throttle window.
+- Ollama request body now passes `keep_alive=-1` per-request (alongside the existing `OLLAMA_KEEP_ALIVE=-1` env on the desktop container; defensive against env reset).
+- New rule added to `docs/FIRSTWAVE_SYSTEM_CONTEXT.md` § 8 (rule 11).
+
+### Why
+
+On 2026-05-13 the vybe-trading backend stacked Ollama → Groq → Claude Sonnet → Claude Haiku cascades that burned the Max quota and amplified `complete()` to 64-minute single-run wall times. firstwave's `_call_cli` invokes the same `~/.local/bin/claude` binary against the same Max account; once Phase 2 ships its agents (enrichment, outreach, intent parser, follow-up, briefing), firstwave will compound the contention without a coordination layer. These gates are pre-emptive — Phase 2 is not built yet so firstwave isn't currently generating LLM traffic.
+
+### State at end of session
+
+- Backend deployed via self-hosted runner (no extra steps); `firstwave-backend.service` restarted at 12:59 CEST.
+- No new env vars required for default behaviour. `FIRSTWAVE_LLM_ALWAYS_ALLOW` defaults to off.
+- Pairs with vybe-trading commits `e0414c8` (`fix(llm_router)`) + `84f2e48` (`docs: ADR-028`).
+
+### Out of scope (tracked for follow-up)
+
+- The `ollama:fq_active` priority counter and `ollama:cpu_degraded_until` breaker introduced by vybe-trading's ADR-030 (afternoon session) are NOT yet honoured by firstwave. firstwave currently uses single-Ollama routing (no CPU tier). Worth wiring up before Phase 2 lights up.
+
+---
 ## 2026-05-11 (continued) — Session: full credential rotation + cache scrub
 
 Same date, second wrap. Continues from the earlier entry (credential hygiene + gitleaks + SSH switch).

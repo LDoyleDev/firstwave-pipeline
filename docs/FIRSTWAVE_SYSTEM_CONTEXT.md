@@ -328,6 +328,8 @@ These rules govern how Claude Code should approach building this system:
 
 10. **Two-track separation** — client and investor pipelines share the database and voice interface but have completely separate outreach logic, system prompts, and approval flows. Never mix messaging between tracks.
 
+11. **Defer LLM calls during vybe-trading active hours** — firstwave shares the desktop Ollama instance and the user's Claude Max account with vybe-trading. `generate()` and `classify()` in `backend/utils/anthropic_client.py` raise `VybeTradingWindowError` outside the allowed windows (weekends + daily 21:00–22:00 UTC CME futures break). Callers must catch and defer (queue / retry on a cron) rather than swallow. Set `FIRSTWAVE_LLM_ALWAYS_ALLOW=1` for manual jobs or tests only. Also honour the shared cooloff key `llm:claude:cooloff_until` — written by vybe-trading after parsing the Claude CLI's `"You've hit your limit"` stdout — to avoid burning quota during a Max-account throttle. See vybe-trading `docs/decisions/ADR-028.md` for the cross-project rationale; added 2026-05-13.
+
 ---
 
 ## 9. ENVIRONMENT VARIABLES
