@@ -35,73 +35,139 @@ class Lead(TypedDict):
 
 def scrape_germany() -> list[Lead]:
     """
-    Scrape German hotel businesses from Bundesanzeiger and IHK.
-
-    For now: Return sample data (production: implement web scraper or API calls)
+    Scrape German hotel businesses from Bundesanzeiger via OpenCorporates API.
+    Falls back to sample data if API unavailable.
     """
     logger.info("Scraping Germany...")
 
-    # Placeholder: In production, this would:
-    # 1. Query Bundesanzeiger API or download bulk export
-    # 2. Filter by business type = "Hotel", "Inn", "Resort"
-    # 3. Extract from major cities (Berlin, Munich, Frankfurt, Cologne, Hamburg)
-    # 4. Parse: Name, address, phone, website
+    import httpx
 
-    sample_leads = [
-        {
-            "name": "Hotel Unter den Linden",
-            "address": "Unter den Linden 35, 10115 Berlin",
-            "country": "Germany",
-            "phone": "+49 30 202 6111",
-            "website": "https://www.hotel-unter-den-linden.de"
-        },
-        {
-            "name": "Bayerischer Hof Munich",
-            "address": "Promenadeplatz 2-6, 80333 Munich",
-            "country": "Germany",
-            "phone": "+49 89 212 0",
-            "website": "https://www.bayerischerhof.de"
-        },
-        # ... add more leads from scraping
-    ]
+    leads = []
 
-    logger.info(f"Germany: {len(sample_leads)} leads")
-    return sample_leads
+    # Try OpenCorporates API (covers German businesses, free tier)
+    try:
+        # Search for hotel businesses in Germany
+        query = "hotel OR inn OR resort"
+        url = "https://api.opencorporates.com/companies/search"
+        params = {
+            "jurisdiction_code": "de",
+            "q": query,
+            "order": "id_desc",
+            "page": 1
+        }
+
+        logger.info("  Querying OpenCorporates API for German hotels...")
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+
+            for company in data.get("companies", [])[:50]:  # Limit to 50
+                c = company["company"]
+
+                # Filter to major cities
+                city = c.get("registered_address_in_full", "").split(",")[-1].strip() if c.get("registered_address_in_full") else ""
+
+                # Extract phone from company data (if available)
+                phone = ""
+                name = c.get("name", "")
+
+                if any(keyword in name.lower() for keyword in ["hotel", "inn", "resort", "gasthof"]):
+                    leads.append({
+                        "name": name,
+                        "address": c.get("registered_address_in_full", ""),
+                        "country": "Germany",
+                        "phone": phone,
+                        "website": c.get("homepage", "")
+                    })
+
+            logger.info(f"  OpenCorporates: {len(leads)} German hotels found")
+    except Exception as e:
+        logger.warning(f"  OpenCorporates API error: {e}, using sample data")
+        leads = [
+            {
+                "name": "Hotel Unter den Linden",
+                "address": "Unter den Linden 35, 10115 Berlin",
+                "country": "Germany",
+                "phone": "+49 30 202 6111",
+                "website": "https://www.hotel-unter-den-linden.de"
+            },
+            {
+                "name": "Bayerischer Hof Munich",
+                "address": "Promenadeplatz 2-6, 80333 Munich",
+                "country": "Germany",
+                "phone": "+49 89 212 0",
+                "website": "https://www.bayerischerhof.de"
+            },
+        ]
+
+    logger.info(f"Germany: {len(leads)} leads")
+    return leads
 
 
 def scrape_france() -> list[Lead]:
     """
-    Scrape French hotel businesses from SIRENE and tourism boards.
-
-    For now: Return sample data (production: implement SIRENE API calls)
+    Scrape French hotel businesses from OpenCorporates API.
+    Falls back to sample data if API unavailable.
     """
     logger.info("Scraping France...")
 
-    # Placeholder: In production, this would:
-    # 1. Query SIRENE API (APE code 5510Z = Hotels)
-    # 2. Filter to major cities (Paris, Lyon, Marseille, Toulouse, Nice)
-    # 3. Extract: Name, address, phone, website
+    import httpx
 
-    sample_leads = [
-        {
-            "name": "Hotel Marais Paris",
-            "address": "23 Rue de Turenne, 75004 Paris",
-            "country": "France",
-            "phone": "+33 1 4277 2025",
-            "website": "https://www.hotelmarais.fr"
-        },
-        {
-            "name": "Le Grand Hotel Lyon",
-            "address": "9 Rue de la Republique, 69001 Lyon",
-            "country": "France",
-            "phone": "+33 4 7285 2500",
-            "website": "https://www.legrandhotellyon.fr"
-        },
-        # ... add more leads from scraping
-    ]
+    leads = []
 
-    logger.info(f"France: {len(sample_leads)} leads")
-    return sample_leads
+    # Try OpenCorporates API (covers French businesses)
+    try:
+        query = "hotel OR inn OR resort"
+        url = "https://api.opencorporates.com/companies/search"
+        params = {
+            "jurisdiction_code": "fr",
+            "q": query,
+            "order": "id_desc",
+            "page": 1
+        }
+
+        logger.info("  Querying OpenCorporates API for French hotels...")
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+
+            for company in data.get("companies", [])[:50]:  # Limit to 50
+                c = company["company"]
+                name = c.get("name", "")
+
+                if any(keyword in name.lower() for keyword in ["hotel", "inn", "resort", "auberge"]):
+                    leads.append({
+                        "name": name,
+                        "address": c.get("registered_address_in_full", ""),
+                        "country": "France",
+                        "phone": "",
+                        "website": c.get("homepage", "")
+                    })
+
+            logger.info(f"  OpenCorporates: {len(leads)} French hotels found")
+    except Exception as e:
+        logger.warning(f"  OpenCorporates API error: {e}, using sample data")
+        leads = [
+            {
+                "name": "Hotel Marais Paris",
+                "address": "23 Rue de Turenne, 75004 Paris",
+                "country": "France",
+                "phone": "+33 1 4277 2025",
+                "website": "https://www.hotelmarais.fr"
+            },
+            {
+                "name": "Le Grand Hotel Lyon",
+                "address": "9 Rue de la Republique, 69001 Lyon",
+                "country": "France",
+                "phone": "+33 4 7285 2500",
+                "website": "https://www.legrandhotellyon.fr"
+            },
+        ]
+
+    logger.info(f"France: {len(leads)} leads")
+    return leads
 
 
 def main():

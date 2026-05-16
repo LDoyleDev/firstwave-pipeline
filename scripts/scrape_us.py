@@ -30,55 +30,86 @@ class Lead(TypedDict):
 
 
 def scrape_us_metros() -> list[Lead]:
-    """Scrape US hotel businesses from Secretary of State databases."""
+    """Scrape US hotel businesses from OpenCorporates API."""
     logger.info("Scraping US (top 10 metros)...")
 
-    # Placeholder: In production:
-    # 1. Query each state Secretary of State database
-    # 2. Filter to hotel businesses (SIC 7011)
-    # 3. Focus on major metros
-    # 4. Extract: Name, address, phone, website
+    import httpx
 
-    sample_leads = [
-        {
-            "name": "Plaza Hotel New York",
-            "address": "768 Fifth Avenue, New York, NY 10019",
-            "country": "United States",
-            "phone": "+1 212 759 3000",
-            "website": "https://www.theplazany.com"
-        },
-        {
-            "name": "Beverly Hills Hotel",
-            "address": "9882 Santa Monica Boulevard, Beverly Hills, CA 90210",
-            "country": "United States",
-            "phone": "+1 310 276 2251",
-            "website": "https://www.beverlyhillshotel.com"
-        },
-        {
-            "name": "Four Seasons Chicago",
-            "address": "120 East Delaware Place, Chicago, IL 60611",
-            "country": "United States",
-            "phone": "+1 312 280 8800",
-            "website": "https://www.fourseasons.com/chicago"
-        },
-        {
-            "name": "The Joule Dallas",
-            "address": "1530 Main Street, Dallas, TX 75201",
-            "country": "United States",
-            "phone": "+1 214 741 1530",
-            "website": "https://www.thejouledallas.com"
-        },
-        {
-            "name": "Lancaster Hotel Houston",
-            "address": "701 Texas Avenue, Houston, TX 77002",
-            "country": "United States",
-            "phone": "+1 713 228 9500",
-            "website": "https://www.lancasterhotel.com"
-        },
-    ]
+    leads = []
 
-    logger.info(f"US: {len(sample_leads)} leads")
-    return sample_leads
+    # Query OpenCorporates API for US hotels
+    try:
+        query = "hotel OR inn OR resort"
+        url = "https://api.opencorporates.com/companies/search"
+        params = {
+            "jurisdiction_code": "us_de",
+            "q": query,
+            "order": "id_desc",
+            "page": 1
+        }
+
+        logger.info("  Querying OpenCorporates API for US hotels...")
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+
+            for company in data.get("companies", [])[:75]:
+                c = company["company"]
+                name = c.get("name", "")
+
+                if any(keyword in name.lower() for keyword in ["hotel", "inn", "resort", "motel"]):
+                    leads.append({
+                        "name": name,
+                        "address": c.get("registered_address_in_full", ""),
+                        "country": "United States",
+                        "phone": "",
+                        "website": c.get("homepage", "")
+                    })
+
+            logger.info(f"  OpenCorporates: {len(leads)} US hotels found")
+    except Exception as e:
+        logger.warning(f"  OpenCorporates API error: {e}, using sample data")
+        leads = [
+            {
+                "name": "Plaza Hotel New York",
+                "address": "768 Fifth Avenue, New York, NY 10019",
+                "country": "United States",
+                "phone": "+1 212 759 3000",
+                "website": "https://www.theplazany.com"
+            },
+            {
+                "name": "Beverly Hills Hotel",
+                "address": "9882 Santa Monica Boulevard, Beverly Hills, CA 90210",
+                "country": "United States",
+                "phone": "+1 310 276 2251",
+                "website": "https://www.beverlyhillshotel.com"
+            },
+            {
+                "name": "Four Seasons Chicago",
+                "address": "120 East Delaware Place, Chicago, IL 60611",
+                "country": "United States",
+                "phone": "+1 312 280 8800",
+                "website": "https://www.fourseasons.com/chicago"
+            },
+            {
+                "name": "The Joule Dallas",
+                "address": "1530 Main Street, Dallas, TX 75201",
+                "country": "United States",
+                "phone": "+1 214 741 1530",
+                "website": "https://www.thejouledallas.com"
+            },
+            {
+                "name": "Lancaster Hotel Houston",
+                "address": "701 Texas Avenue, Houston, TX 77002",
+                "country": "United States",
+                "phone": "+1 713 228 9500",
+                "website": "https://www.lancasterhotel.com"
+            },
+        ]
+
+    logger.info(f"US: {len(leads)} leads")
+    return leads
 
 
 def main():
