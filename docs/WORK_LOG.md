@@ -1,6 +1,37 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-19 (evening) — Session: backlog catch-up push + cross-machine sync bootstrap
+
+Brought all three machines (vybe-desktop, surface-pro-3, vybe-pi) onto the same `main` HEAD after a week of unpushed work on vybe-desktop. Bootstrapped a separate `~/.claude-config` sync system (private GitHub repo `LDoyleDev/claude-config`) so memory + slash commands + global `CLAUDE.md` stay in sync across vybe-desktop and SP3 going forward.
+
+### Firstwave changes shipped
+
+- Pushed 10 outgoing commits to `origin/main` — 4 from 2026-05-16 (Phase 1-2 hotel lead-gen foundation, already local) plus 6 new tonight:
+  - `chore(gitignore)`: exclude `data/`, `logs/`, `.claude/` pipeline derived artefacts.
+  - `docs`: `NEXT_LEAD_SOURCES.md` + `PHASE_2_3_COMPLETION.md`.
+  - `feat(lead-gen)`: OSM Overpass scraper, injection-audit, group-consolidate, outreach-score, draft-outreach-emails, enrich_after_hours + post_enrichment_chain runners (11 new scripts).
+  - `enhance(scrapers)`: broader country list (Ireland, AU, NZ, Malta, all Nordics + Eastern Europe + Mediterranean), relaxed contact-info gate, `verification_status` moved into `enrichment_data` JSON.
+  - `feat(review)`: research section in `ReviewCard.jsx` (decision-maker name, signal URLs, hooks, confidence badge) + `scripts/research_decision_makers.py`.
+  - `docs(work-log)`: catch-up entries for 2026-05-16, 2026-05-18 morning + late evening, 2026-05-19 (the OSM scrape + injection audit + post-enrichment chain push).
+- All three machines at `3d05361`. Vybe-pi auto-deploy ran via GitHub Actions runner; `firstwave-backend.service` restarted at 21:21:24 CEST, `/health` returns 200.
+
+### Cross-machine Claude scaffold sync (separate `LDoyleDev/claude-config` repo)
+
+- Private GitHub repo holds canonical `CLAUDE.md`, slash commands, home-level memory, and per-project memory. Repo paths strip the per-user `-home-{user}-` slug prefix so the same project maps to one repo path regardless of whether the local user is `vybe` or `liam`.
+- `/wrap` step 7 now invokes `~/.claude-config/scripts/sync-out.sh` to push at session end (mirror with `--delete`, commit + push).
+- `UserPromptSubmit` hook installed in `~/.claude/settings.json` on both dev machines, calling `sync-in.sh --once-per-session` at session start (additive — never deletes local files, marker-gated to once per session).
+- Merged divergent home memory: SP3's 12 files + vybe-desktop's 18 files union'd to 28 (only `feedback_no_coauthor.md` overlapped; kept SP3's more-detailed version). `CLAUDE.md` union'd to the 153-line superset.
+- Round-trip test confirmed: SP3 write → `sync-out` → repo → `sync-in` on vybe-desktop → file landed. Documented in `~/.claude-config/README.md`.
+
+### Outstanding
+
+- `CLAUDE.md` "CURRENT PHASE" updated this session — was stale since the lead-gen initiative started 2026-05-16.
+- Vybe-pi has 3 untracked legacy files at repo root (`actions-runner/`, `deploy.sh`, `start.sh`) — gitignore or remove in a future session.
+- France + Denmark OSM coverage still zero (504 Gateway Timeouts on single-country queries); region-bbox backfill pending — see memory `feedback-overpass-country-split`.
+- Next operational step is reviewing the 104 cold-email drafts via the `/review-queue` frontend or direct Supabase.
+
+---
 ## 2026-05-19 — Session: Post-enrichment chain run (group consolidation → priority scoring → 200 cold-email drafts)
 
 Final stage of the 2026-05-18 OSM scrape + enrichment push. Operator wanted the post-enrichment chain to complete in one go without re-gating between steps, so this run is the exception that sets `FIRSTWAVE_LLM_ALWAYS_ALLOW=1` (see [[feedback-after-hours-llm-enrichment]]). All upstream enrichment had already finished and was therefore gate-respected.
