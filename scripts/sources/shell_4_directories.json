@@ -1,0 +1,22 @@
+[
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/europe", "country": "Europe"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/france", "country": "France"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/italy", "country": "Italy"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/spain", "country": "Spain"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/germany", "country": "Germany"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/united-kingdom", "country": "United Kingdom"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/austria", "country": "Austria"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/switzerland", "country": "Switzerland"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/netherlands", "country": "Netherlands"},
+  {"url": "https://www.relaischateaux.com/us/our-hotels-relais-chateaux/belgium", "country": "Belgium"},
+  {"url": "https://slh.com/europe", "country": "Europe"},
+  {"url": "https://slh.com/europe/france", "country": "France"},
+  {"url": "https://slh.com/europe/italy", "country": "Italy"},
+  {"url": "https://slh.com/europe/spain", "country": "Spain"},
+  {"url": "https://slh.com/europe/united-kingdom", "country": "United Kingdom"},
+  {"url": "https://slh.com/europe/germany", "country": "Germany"},
+  {"url": "https://slh.com/europe/austria", "country": "Austria"},
+  {"url": "https://slh.com/europe/switzerland", "country": "Switzerland"},
+  {"url": "https://slh.com/americas/united-states", "country": "United States"},
+  {"url": "https://www.leadinghotels.com/en-us/destinations/europe", "country": "Europe"}
+]

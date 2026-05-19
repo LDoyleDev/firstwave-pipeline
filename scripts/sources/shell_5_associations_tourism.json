@@ -1,0 +1,22 @@
+[
+  {"url": "https://www.dehoga-bundesverband.de/", "country": "Germany"},
+  {"url": "https://www.umih.fr/", "country": "France"},
+  {"url": "https://www.ukhospitality.org.uk/", "country": "United Kingdom"},
+  {"url": "https://www.cehat.com/", "country": "Spain"},
+  {"url": "https://www.federalberghi.it/", "country": "Italy"},
+  {"url": "https://www.hospitality.nl/", "country": "Netherlands"},
+  {"url": "https://www.horeca.be/", "country": "Belgium"},
+  {"url": "https://www.ahla.com/", "country": "United States"},
+  {"url": "https://www.michelin.com/en/destinations/germany/hotels", "country": "Germany"},
+  {"url": "https://www.michelin.com/en/destinations/france/hotels", "country": "France"},
+  {"url": "https://www.michelin.com/en/destinations/italy/hotels", "country": "Italy"},
+  {"url": "https://www.michelin.com/en/destinations/spain/hotels", "country": "Spain"},
+  {"url": "https://www.michelin.com/en/destinations/united-kingdom/hotels", "country": "United Kingdom"},
+  {"url": "https://en.wikipedia.org/wiki/List_of_Marriott_brands", "country": "Multi"},
+  {"url": "https://en.wikipedia.org/wiki/List_of_Hilton_brands", "country": "Multi"},
+  {"url": "https://en.wikipedia.org/wiki/List_of_hotel_chains", "country": "Multi"},
+  {"url": "https://en.wikipedia.org/wiki/List_of_largest_hotels", "country": "Multi"},
+  {"url": "https://en.wikipedia.org/wiki/Category:Hotel_chains_in_Europe", "country": "Europe"},
+  {"url": "https://en.wikipedia.org/wiki/Category:Independent_hotels", "country": "Multi"},
+  {"url": "https://en.wikipedia.org/wiki/Category:Boutique_hotels", "country": "Multi"}
+]
