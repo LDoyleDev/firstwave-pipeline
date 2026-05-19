@@ -22,10 +22,20 @@ logger = logging.getLogger(__name__)
 
 
 APPROVED_COUNTRIES = {
-    "Germany", "France", "UK", "United Kingdom", "Spain", "Italy", "Netherlands",
-    "Belgium", "Luxembourg", "Austria", "Switzerland", "Denmark", "Sweden", "Norway",
-    "Finland", "Poland", "Czech Republic", "Portugal", "Greece", "Hungary",
-    "United States", "USA", "US", "Canada"
+    # English-speaking (focus: non-US)
+    "United Kingdom", "UK", "Ireland", "Canada", "Australia", "New Zealand", "Malta",
+    # Western/Central Europe
+    "Germany", "France", "Spain", "Italy", "Netherlands", "Belgium",
+    "Austria", "Switzerland", "Portugal", "Luxembourg",
+    # Nordic
+    "Denmark", "Sweden", "Norway", "Finland", "Iceland",
+    # Eastern Europe
+    "Poland", "Czech Republic", "Hungary", "Slovakia", "Romania", "Bulgaria",
+    "Croatia", "Slovenia", "Estonia", "Latvia", "Lithuania", "Serbia",
+    # Mediterranean
+    "Greece", "Cyprus",
+    # US kept for backward-compat but not a focus target
+    "United States", "USA", "US",
 }
 
 REJECT_KEYWORDS = [
@@ -60,11 +70,9 @@ def validate_lead(lead: dict) -> tuple[bool, str]:
     if country not in APPROVED_COUNTRIES:
         return False, f"Country not approved: {country}"
 
-    # Gate 4: Contact info
-    phone = lead.get("phone", "")
-    website = lead.get("website", "")
-    if not (phone or website):
-        return False, "No contact info (phone or website)"
+    # Gate 4: Contact info — optional at this stage (Phase 3 enriches via web search)
+    # Removed strict requirement: hotels without phone/website in source data can still
+    # be enriched in Phase 3 using their name + country.
 
     # Gate 5: Keyword filter
     name_lower = lead["name"].lower()

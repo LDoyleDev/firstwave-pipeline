@@ -291,15 +291,19 @@ def save_to_supabase(batch_result: dict) -> int:
         classification = item["classification"]
         enrichment = item.get("enrichment")
 
-        # Determine status based on classification
-        status = "discarded"
+        # Determine verification status (stored in enrichment_data, not as DB column)
+        verification_status = "discarded"
         if classification["classification"] == "Verified Hotel Operator":
-            status = "verified_hotel"
+            verification_status = "verified_hotel"
         elif classification["classification"] == "Unclear - needs manual review":
-            status = "manual_review"
+            verification_status = "manual_review"
 
         # Skip if confidence too low
         if classification["confidence"] < 0.5:
+            continue
+
+        # Skip discarded leads (not hotels)
+        if verification_status == "discarded":
             continue
 
         record = {
@@ -311,6 +315,7 @@ def save_to_supabase(batch_result: dict) -> int:
             "pipeline_stage": "discovered",
             "enrichment_data": {
                 "raw_name": lead["name"],
+                "verification_status": verification_status,
                 "classification": classification,
                 "enrichment": enrichment,
             },
@@ -319,10 +324,6 @@ def save_to_supabase(batch_result: dict) -> int:
             "warmth": "cold",
             "lead_score": int(classification["confidence"] * 100),
         }
-
-        # Add status if enriched
-        if status != "discarded":
-            record["status"] = status
 
         try:
             # Use Supabase to insert

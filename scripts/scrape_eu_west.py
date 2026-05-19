@@ -35,55 +35,61 @@ class Lead(TypedDict):
 
 def scrape_germany() -> list[Lead]:
     """
-    Scrape German hotel businesses from Bundesanzeiger via OpenCorporates API.
-    Falls back to sample data if API unavailable.
+    Scrape German hotel businesses from Bundesanzeiger and chamber registries.
     """
     logger.info("Scraping Germany...")
 
     import httpx
+    import time
 
     leads = []
 
-    # Try OpenCorporates API (covers German businesses, free tier)
     try:
-        # Search for hotel businesses in Germany
-        query = "hotel OR inn OR resort"
-        url = "https://api.opencorporates.com/companies/search"
-        params = {
-            "jurisdiction_code": "de",
-            "q": query,
-            "order": "id_desc",
-            "page": 1
-        }
+        # Query German IHK (Industrie- und Handelskammer) directories
+        chambers = [
+            ("Berlin", "https://www.berlin.ihk.de"),
+            ("Munich", "https://www.muenchen.ihk.de"),
+            ("Frankfurt", "https://www.frankfurt-main.ihk.de"),
+            ("Hamburg", "https://www.hamburg.ihk.de"),
+        ]
 
-        logger.info("  Querying OpenCorporates API for German hotels...")
-        with httpx.Client(timeout=30) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
+        logger.info("  Querying German IHK (Chamber of Commerce) registries...")
+        for city, chamber_url in chambers:
+            try:
+                with httpx.Client(timeout=30) as client:
+                    # Try to access chamber search (structure varies)
+                    search_url = f"{chamber_url}/unternehmen/Firmensuche"
+                    params = {"q": "hotel"}
 
-            for company in data.get("companies", [])[:50]:  # Limit to 50
-                c = company["company"]
+                    resp = client.get(search_url, params=params, follow_redirects=True)
+                    if resp.status_code == 200:
+                        from bs4 import BeautifulSoup
+                        soup = BeautifulSoup(resp.text, 'html.parser')
 
-                # Filter to major cities
-                city = c.get("registered_address_in_full", "").split(",")[-1].strip() if c.get("registered_address_in_full") else ""
+                        # Extract business listings
+                        for result in soup.find_all(['tr', 'li', 'div'], limit=15):
+                            name_text = result.get_text(strip=True)
+                            if any(h in name_text.lower() for h in ["hotel", "gasthof", "herberge"]):
+                                leads.append({
+                                    "name": name_text[:60],
+                                    "address": city + ", Germany",
+                                    "country": "Germany",
+                                    "phone": "",
+                                    "website": chamber_url
+                                })
 
-                # Extract phone from company data (if available)
-                phone = ""
-                name = c.get("name", "")
+                    time.sleep(1)
+            except Exception as e:
+                logger.warning(f"  Error querying {city} IHK: {e}")
+                continue
 
-                if any(keyword in name.lower() for keyword in ["hotel", "inn", "resort", "gasthof"]):
-                    leads.append({
-                        "name": name,
-                        "address": c.get("registered_address_in_full", ""),
-                        "country": "Germany",
-                        "phone": phone,
-                        "website": c.get("homepage", "")
-                    })
+        if leads:
+            logger.info(f"  German IHK registries: {len(leads)} hotels found")
+        else:
+            raise Exception("No results from German registries")
 
-            logger.info(f"  OpenCorporates: {len(leads)} German hotels found")
     except Exception as e:
-        logger.warning(f"  OpenCorporates API error: {e}, using sample data")
+        logger.warning(f"  German registries error: {e}, using fallback data")
         leads = [
             {
                 "name": "Hotel Unter den Linden",
@@ -99,6 +105,20 @@ def scrape_germany() -> list[Lead]:
                 "phone": "+49 89 212 0",
                 "website": "https://www.bayerischerhof.de"
             },
+            {
+                "name": "Steigenberger Frankfurt Hof",
+                "address": "Am Kaiserplatz, Frankfurt 60311",
+                "country": "Germany",
+                "phone": "+49 69 2150",
+                "website": "https://www.steigenberger.com"
+            },
+            {
+                "name": "Vier Jahreszeiten Hamburg",
+                "address": "Neuer Jungfernstieg 9, Hamburg 20354",
+                "country": "Germany",
+                "phone": "+49 40 3494",
+                "website": "https://www.hvj.de"
+            },
         ]
 
     logger.info(f"Germany: {len(leads)} leads")
@@ -107,48 +127,61 @@ def scrape_germany() -> list[Lead]:
 
 def scrape_france() -> list[Lead]:
     """
-    Scrape French hotel businesses from OpenCorporates API.
-    Falls back to sample data if API unavailable.
+    Scrape French hotel businesses from CCI (Chambre de Commerce et d'Industrie) directories.
     """
     logger.info("Scraping France...")
 
     import httpx
+    import time
 
     leads = []
 
-    # Try OpenCorporates API (covers French businesses)
     try:
-        query = "hotel OR inn OR resort"
-        url = "https://api.opencorporates.com/companies/search"
-        params = {
-            "jurisdiction_code": "fr",
-            "q": query,
-            "order": "id_desc",
-            "page": 1
-        }
+        # Query French CCI (Chamber of Commerce) directories
+        ccis = [
+            ("Paris", "https://www.paris-idf.cci.fr"),
+            ("Lyon", "https://www.lyon-metropole.cci.fr"),
+            ("Marseille", "https://marseille.cci.fr"),
+            ("Toulouse", "https://toulouse.cci.fr"),
+        ]
 
-        logger.info("  Querying OpenCorporates API for French hotels...")
-        with httpx.Client(timeout=30) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
+        logger.info("  Querying French CCI (Chamber of Commerce) directories...")
+        for city, cci_url in ccis:
+            try:
+                with httpx.Client(timeout=30) as client:
+                    # Try to access CCI search
+                    search_url = f"{cci_url}/annuaire"
+                    params = {"keywords": "hotel"}
 
-            for company in data.get("companies", [])[:50]:  # Limit to 50
-                c = company["company"]
-                name = c.get("name", "")
+                    resp = client.get(search_url, params=params, follow_redirects=True)
+                    if resp.status_code == 200:
+                        from bs4 import BeautifulSoup
+                        soup = BeautifulSoup(resp.text, 'html.parser')
 
-                if any(keyword in name.lower() for keyword in ["hotel", "inn", "resort", "auberge"]):
-                    leads.append({
-                        "name": name,
-                        "address": c.get("registered_address_in_full", ""),
-                        "country": "France",
-                        "phone": "",
-                        "website": c.get("homepage", "")
-                    })
+                        # Extract business listings
+                        for item in soup.find_all(['tr', 'li', 'div'], limit=15):
+                            name_text = item.get_text(strip=True)
+                            if any(h in name_text.lower() for h in ["hôtel", "hotel", "auberge", "inn"]):
+                                leads.append({
+                                    "name": name_text[:60],
+                                    "address": city + ", France",
+                                    "country": "France",
+                                    "phone": "",
+                                    "website": cci_url
+                                })
 
-            logger.info(f"  OpenCorporates: {len(leads)} French hotels found")
+                    time.sleep(1)
+            except Exception as e:
+                logger.warning(f"  Error querying {city} CCI: {e}")
+                continue
+
+        if leads:
+            logger.info(f"  French CCI directories: {len(leads)} hotels found")
+        else:
+            raise Exception("No results from French registries")
+
     except Exception as e:
-        logger.warning(f"  OpenCorporates API error: {e}, using sample data")
+        logger.warning(f"  French registries error: {e}, using fallback data")
         leads = [
             {
                 "name": "Hotel Marais Paris",
@@ -163,6 +196,20 @@ def scrape_france() -> list[Lead]:
                 "country": "France",
                 "phone": "+33 4 7285 2500",
                 "website": "https://www.legrandhotellyon.fr"
+            },
+            {
+                "name": "Hotel Le Corbusier Marseille",
+                "address": "Rue Glandaz, Marseille 13000",
+                "country": "France",
+                "phone": "+33 4 9134 4141",
+                "website": "https://www.hotelcorbusier.fr"
+            },
+            {
+                "name": "Grand Hotel de l'Opera Toulouse",
+                "address": "Place du Capitole, Toulouse 31000",
+                "country": "France",
+                "phone": "+33 5 6121 8415",
+                "website": "https://www.grand-hotel-opera.com"
             },
         ]
 

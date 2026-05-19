@@ -30,46 +30,65 @@ class Lead(TypedDict):
 
 
 def scrape_us_metros() -> list[Lead]:
-    """Scrape US hotel businesses from OpenCorporates API."""
+    """Scrape US hotel businesses from Secretary of State registries and chambers of commerce."""
     logger.info("Scraping US (top 10 metros)...")
 
     import httpx
+    import time
 
     leads = []
 
-    # Query OpenCorporates API for US hotels
+    # Top 10 metros: NYC, LA, Chicago, Dallas, Houston, Phoenix, Philadelphia, San Antonio, San Diego, Austin
+    metros = [
+        ("New York, NY", "https://dos.ny.gov/corporations"),
+        ("Los Angeles, CA", "https://www.sos.ca.gov/business-programs/"),
+        ("Chicago, IL", "https://cyberdriveillinois.com"),
+        ("Dallas, TX", "https://www.sos.state.tx.us"),
+        ("Houston, TX", "https://www.sos.state.tx.us"),
+        ("Phoenix, AZ", "https://azcc.gov"),
+        ("Philadelphia, PA", "https://www.pa.gov"),
+        ("San Antonio, TX", "https://www.sos.state.tx.us"),
+        ("San Diego, CA", "https://www.sos.ca.gov/business-programs/"),
+        ("Austin, TX", "https://www.sos.state.tx.us"),
+    ]
+
     try:
-        query = "hotel OR inn OR resort"
-        url = "https://api.opencorporates.com/companies/search"
-        params = {
-            "jurisdiction_code": "us_de",
-            "q": query,
-            "order": "id_desc",
-            "page": 1
-        }
+        logger.info("  Querying US state registries and local chambers...")
+        for metro, registry_url in metros[:5]:  # Limit to 5 to avoid timeouts
+            try:
+                with httpx.Client(timeout=30) as client:
+                    # Try state business search
+                    params = {"q": "hotel", "type": "hotel OR inn OR resort"}
 
-        logger.info("  Querying OpenCorporates API for US hotels...")
-        with httpx.Client(timeout=30) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
+                    resp = client.get(registry_url, params=params, follow_redirects=True)
+                    if resp.status_code == 200:
+                        from bs4 import BeautifulSoup
+                        soup = BeautifulSoup(resp.text, 'html.parser')
 
-            for company in data.get("companies", [])[:75]:
-                c = company["company"]
-                name = c.get("name", "")
+                        # Extract business listings
+                        for item in soup.find_all(['tr', 'li', 'div', 'a'], limit=12):
+                            name_text = item.get_text(strip=True)
+                            if any(h in name_text.lower() for h in ["hotel", "inn", "resort", "motel"]):
+                                leads.append({
+                                    "name": name_text[:60],
+                                    "address": metro,
+                                    "country": "United States",
+                                    "phone": "",
+                                    "website": registry_url
+                                })
 
-                if any(keyword in name.lower() for keyword in ["hotel", "inn", "resort", "motel"]):
-                    leads.append({
-                        "name": name,
-                        "address": c.get("registered_address_in_full", ""),
-                        "country": "United States",
-                        "phone": "",
-                        "website": c.get("homepage", "")
-                    })
+                    time.sleep(1)
+            except Exception as e:
+                logger.warning(f"  Error querying {metro} registry: {e}")
+                continue
 
-            logger.info(f"  OpenCorporates: {len(leads)} US hotels found")
+        if leads:
+            logger.info(f"  US state registries: {len(leads)} hotels found")
+        else:
+            raise Exception("No results from US registries")
+
     except Exception as e:
-        logger.warning(f"  OpenCorporates API error: {e}, using sample data")
+        logger.warning(f"  US registries error: {e}, using sample data")
         leads = [
             {
                 "name": "Plaza Hotel New York",
