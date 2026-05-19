@@ -10,6 +10,14 @@ function parseJson(raw) {
   try { return JSON.parse(raw) } catch { return null }
 }
 
+function normalizeSignal(s) {
+  if (s && typeof s === 'object') return { text: s.text || '', url: s.source_url || null }
+  if (typeof s !== 'string') return { text: String(s ?? ''), url: null }
+  const m = s.match(/\(source:\s*(https?:\/\/[^)\s]+)\)/i) || s.match(/(https?:\/\/\S+)/)
+  if (m) return { text: s.replace(m[0], '').trim().replace(/[,:.\s]+$/, ''), url: m[1] }
+  return { text: s, url: null }
+}
+
 function EmailBlock({ to, subject, body, label }) {
   return (
     <div className="mb-3">
@@ -99,6 +107,70 @@ export function ReviewCard({ item, track, onApprove, onReject, onEdit, isActive 
               {item.pain_signals.map((s, i) => <Badge key={i} variant="warning">{s}</Badge>)}
             </div>
           )}
+
+          {(() => {
+            const research = item.enrichment_data?.research
+            if (!research) return null
+            const dm = research.decision_maker
+            const signals = (research.recent_signals || []).map(normalizeSignal)
+            const hooks = research.personal_hooks || []
+            const hasContent = dm?.name || signals.length > 0 || hooks.length > 0
+            if (!hasContent) return null
+            return (
+              <div className="mb-3 bg-navy/40 rounded border border-muted/30 px-3 py-2 text-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-500 uppercase tracking-wider">Research</span>
+                  {typeof research.confidence === 'number' && (
+                    <Badge variant={research.confidence >= 0.6 ? 'default' : 'warning'}>
+                      DM conf {research.confidence.toFixed(2)}
+                    </Badge>
+                  )}
+                </div>
+                {dm?.name ? (
+                  <div className="mb-2">
+                    <span className="text-gray-500">Decision-maker:</span>{' '}
+                    <span className="text-gray-200">{dm.name}{dm.title ? ` · ${dm.title}` : ''}</span>
+                    {dm.source_url && (
+                      <a href={dm.source_url} target="_blank" rel="noreferrer"
+                         className="text-accent hover:underline ml-2">↗ verify</a>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mb-2 text-gray-500">Decision-maker: not identified — emails address by role</div>
+                )}
+                {signals.length > 0 && (
+                  <div className="mb-2">
+                    <div className="text-gray-500 mb-1">Signals</div>
+                    <ul className="space-y-1">
+                      {signals.map((s, i) => (
+                        <li key={i} className="flex gap-2 leading-relaxed">
+                          <span className="text-gray-600 shrink-0">·</span>
+                          <span className="text-gray-300 flex-1">{s.text}</span>
+                          {s.url && (
+                            <a href={s.url} target="_blank" rel="noreferrer"
+                               className="text-accent hover:underline shrink-0">↗</a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {hooks.length > 0 && (
+                  <div>
+                    <div className="text-gray-500 mb-1">Hooks</div>
+                    <ul className="space-y-0.5">
+                      {hooks.map((h, i) => (
+                        <li key={i} className="text-gray-300 leading-relaxed">· {h}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {research.notes && (
+                  <div className="mt-2 text-gray-600 italic">{research.notes}</div>
+                )}
+              </div>
+            )
+          })()}
 
           {editing ? (
             <div className="space-y-2 mb-3">
