@@ -5,3 +5,10 @@ __pycache__/
 credentials.json
 node_modules/
 frontend/dist/
+
+# Lead-gen pipeline derived artefacts (110MB+ of JSON / log output)
+data/
+logs/
+
+# Per-developer Claude Code project settings + scheduled-task lock
+.claude/
