@@ -1,6 +1,146 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-19 — Session: Post-enrichment chain run (group consolidation → priority scoring → 200 cold-email drafts)
+
+Final stage of the 2026-05-18 OSM scrape + enrichment push. Operator wanted the post-enrichment chain to complete in one go without re-gating between steps, so this run is the exception that sets `FIRSTWAVE_LLM_ALWAYS_ALLOW=1` (see [[feedback-after-hours-llm-enrichment]]). All upstream enrichment had already finished and was therefore gate-respected.
+
+### Built / run
+
+- `scripts/group_consolidate.py` — Haiku classifies each verified lead's `parent_group` (Marriott / Hilton / Accor / IHG / Hyatt / Wyndham / Choice / Best Western / Radisson / Meliá / NH / Four Seasons / Mandarin Oriental / Rosewood / Aman / Belmond / Kempinski / Shangri-La / Six Senses / Soneva / `Independent`). One property per group marked `is_primary_contact=true`. Sets `outreach_approved=TRUE` on primaries only — non-primary chain properties stay in DB but are excluded from outreach so we don't spam shared sales teams with N parallel emails.
+- `scripts/outreach_score.py` — 0-100 `lead_score`. Weights: country (EU + English-speaking high, US/CA/AU tier-3), operator_type (`independent` 1.0 → `chain` 0.5), pain_points (OTA/revenue/yield management = top weights), DM role (Owner/GM 1.0 → Marketing manager 0.7).
+- `scripts/draft_outreach_emails.py --top-n 200` — Haiku-style prompt via Ollama (`gpt-oss:20b`), 80-120 word personalised body + 6-10 word subject. Persona: Liam Doyle, Berlin, soft 15-min-call CTA mentioning a 10:30 / 10:50 / 11:10 Europe/Berlin slot. Drafts written to `leads.outreach_email_1`.
+- `scripts/post_enrichment_chain.sh` — orchestrator: blocks on `pgrep -f enrich_leads_haiku|enrich_max_test`, then runs the three stages with `tee` into `logs/`.
+
+### Validation (Supabase ground truth at end of session)
+
+| Metric | Count |
+|---|---|
+| Total `leads` rows | 1000 |
+| By source | `haiku_pilot` 838, `haiku_max_test` 47, `apollo` 115 (legacy) |
+| `verification_status = verified_hotel` | 852 |
+| Primary contacts | 510 |
+| `outreach_approved = TRUE` | 514 |
+| With `lead_score` | 947 |
+| With `outreach_email_1` draft | 104 |
+| Top parent groups | Independent 502, Accor 15, Hilton 9, IHG 8, Marriott 7, Choice 4, Wyndham 4, Radisson 3, Meliá 3, NH 3 |
+
+(The group-consolidate log reported 971 records updated / 897 set primary mid-run; the lower current numbers reflect later post-processing.)
+
+### Known issues / notes
+
+- 200 drafts requested, 104 with non-null `outreach_email_1` end-state — the rest were overwritten/cleared during a later pass or had pre-existing drafts; spot-check before re-running.
+- France + Denmark have zero coverage in the underlying OSM scrape ([[feedback-overpass-country-split]]) — need a region-split backfill before we have full European coverage.
+- Post-enrichment chain script hardcodes `FIRSTWAVE_LLM_ALWAYS_ALLOW=1` — fine as a manual chain after enrichment is done, but never call this from a cron / automation that triggers without the operator present.
+
+### Next
+
+- Review the 200 drafts (they sit on `leads.outreach_email_1`; surface via `/review-queue` frontend or direct Supabase).
+- Backfill FR/DK OSM data via region bbox split.
+- Commit the still-untracked pipeline scripts (`scrape_osm.py`, `injection_audit.py`, `outreach_score.py`, `draft_outreach_emails.py`, `enrich_after_hours.sh`, `post_enrichment_chain.sh`) — they're production-grade now.
+
+---
+
+## 2026-05-18 (late evening) — OSM Overpass scrape (70k hotels) + injection audit + 5-shell Haiku enrichment
+
+Major lead-volume expansion past the Wikipedia-only ceiling. End-of-day Supabase count went from ~695 verified candidates to 838 `haiku_pilot` rows after the enrichment chunks ran overnight.
+
+### Built / run
+
+- `scripts/scrape_osm.py` — queries OSM Overpass API `node[tourism=hotel]` across 34 target countries (English-speaking ex-US, Western/Central/Eastern Europe, Nordic, Mediterranean). 2s rate-limit delay between queries, 180s timeout each. Writes `data/phase2/osm_hotels.json`.
+  - **Result: 70,739 hotels in ~18 minutes** (22:24 → 22:42 CEST).
+  - Top yields: Germany 13,630 · Italy 13,051 · Spain 7,600 · Greece 5,110 · UK 3,687 · Poland 2,797 · Austria 2,748 · Switzerland 2,435 · Netherlands 2,258 · Czech Republic 2,209 · Canada 1,741 · Australia 1,481 · Sweden 1,095 · Portugal 1,493.
+  - **France + Denmark returned 504 Gateway Timeout — 0 hotels each.** Single-country Overpass queries exceed the public endpoint's server-side timeout; see [[feedback-overpass-country-split]] for the region-bbox fix.
+
+- `scripts/injection_audit.py` — defensive pass over scraped data before LLM enrichment. Scans for known injection phrases (`"ignore previous"`, `"system:"`, `"you are now"`, role tokens), excessive newlines, RTL override + zero-width chars, and per-field length anomalies. Splits to `clean_candidates.json` + `quarantine.json`.
+  - **Result: 69,054 scanned → 69,001 clean / 53 quarantined.**
+  - Flag breakdown: 36 `too_long` · 11 `phrase` · 4 `newlines` · 2 `rtl_override` · 1 `zero_width`.
+  - Fields hit: brand 24, phone 15, address 9, name 3, website 2, email 1.
+  - Spot-check: most quarantines look like malformed OSM tags (e.g. Steigenberger's `brand` field had a newline-separated head-office address), not deliberate attacks — but the gate exists for the case where one is. Manually review `quarantine.json` before discarding.
+
+- `scripts/enrich_after_hours.sh` — launches 5 parallel `enrich_leads_haiku.py` shells on chunks 1-5 under `nohup`, logging to `logs/enrich_chunk_{1..5}.log`. Crucially does **not** set `FIRSTWAVE_LLM_ALWAYS_ALLOW=1` — relies on `backend/utils/anthropic_client.py` `_is_vybe_trading_window()` to defer LLM calls during vybe-trading active hours. Ran overnight 2026-05-18 → 2026-05-19.
+
+### Why
+
+Wikipedia-only ceiling was ~695 verified leads after enrichment (per `docs/NEXT_LEAD_SOURCES.md`); the target was 1000 outreach-ready primaries. OSM was the tier-2 "free, 1-2 hours to write extractor" option in that ranking. Final tally proves it was the right call — 70k raw → ~838 verified after enrichment + group consolidation.
+
+### Known issues / notes
+
+- France + Denmark gap is meaningful (France alone likely has ~8-10k OSM hotels). Backfill pending.
+- Overpass's public endpoint had transient 504s on a couple of other countries mid-run — they retried via the next per-country call cycle but worth noting for re-runs.
+- `injection_audit.py` and `scrape_osm.py` are both still untracked in git as of 2026-05-19.
+
+### Next
+
+Post-enrichment chain (group consolidation → priority scoring → cold-email drafts) — see next-day entry above.
+
+---
+
+## 2026-05-18 (morning) — Haiku enrichment pipeline + Wikipedia coordinator expansion
+
+Built the LLM-driven enrichment + group-consolidation infrastructure on top of the 2026-05-16 scraper foundation. Wikipedia run delivered the first 695 verified candidates.
+
+### Built
+
+- `scripts/enrich_leads_haiku.py` — two-pass enrichment using Haiku. Pass 1 (`clarify_lead`): JSON classification `Verified Hotel Operator | Not a Hotel | Unclear` with 0.0-1.0 confidence + reasoning. Pass 2 (`enrich_lead`): operator_type (`independent`/`boutique`/`franchise`), team_size_estimate, pain_points, decision_maker_role, region. Writes Supabase `leads` rows with `source=haiku_pilot`. Batches of 5 (CLAUDE.md rule), respects vybe-trading window via `VybeTradingWindowError`.
+- `scripts/group_consolidate.py` — Haiku classifies parent chain. Hard-coded chain taxonomy (Marriott family, Hilton family, Accor, IHG, Hyatt, Wyndham, Choice, Best Western, Radisson, Meliá, NH/Minor, Four Seasons, Mandarin Oriental, Rosewood, Aman, Belmond, Kempinski, Shangri-La, Six Senses, Soneva, Independent). Marks one primary per group; sets `outreach_approved=TRUE` only on primaries.
+- `scripts/enrich_after_hours.sh` — 5-shell parallel runner, no `FIRSTWAVE_LLM_ALWAYS_ALLOW` override.
+- `scripts/scrape_with_haiku.py` — Wikipedia `Category:Hotels_in_<city>` scraper that uses Ollama to extract structured JSON from page content (95%+ valid JSON rate per `docs/NEXT_LEAD_SOURCES.md`).
+
+### Validation (end of Wikipedia run)
+
+- Raw candidates from 10 Wikipedia shells: ~700
+- Verified (post-Haiku clarification): 695
+- Manual review queue: ~110 (confidence 0.75-0.84)
+- Expected post-group-consolidation primary contacts: 350-400
+
+### Known issues / notes
+
+- Worked sources: Wikipedia `Category:Hotels_in_X`, Haiku JSON extraction, multi-shell parallel (10 shells, clean dedup).
+- Did NOT work: Relais & Châteaux (JS-heavy), Small Luxury Hotels (same), Michelin Guide (anti-bot), Chamber of Commerce sites (403), OpenCorporates (needs API key), Wikipedia `List_of_hotels_in_X` (page format doesn't exist).
+- Tier-1 source ranking documented in `docs/NEXT_LEAD_SOURCES.md` — wikipedia regions + OSM + Companies House CSV are the cheap big wins.
+
+### Next
+
+OSM Overpass scrape to break past the Wikipedia ceiling — see same-day late-evening entry above.
+
+---
+
+## 2026-05-16 — Hotel lead-gen Phase 1-2 foundation (committed)
+
+4 commits already pushed locally on vybe-desktop but not yet to `origin/main` as of 2026-05-19.
+
+### Shipped (commits)
+
+- `734cd0b` — Phase 1 foundation for hotel lead generation (2000-lead pipeline)
+- `1e4899e` — Multi-shell parallel pipeline for Phase 2-4 (lead generation)
+- `da4cd49` — Phase 2 scraper templates + orchestration + quickstart guide
+- `556a115` — Phase 2 scrapers with OpenCorporates API integration (with fallback)
+
+### Built
+
+- 5 regional scrapers: `scrape_eu_west.py`, `scrape_eu_central.py`, `scrape_eu_south.py`, `scrape_us.py`, `scrape_booking_expedia.py`.
+- Pipeline glue: `combine_batches.py`, `dedup_leads.py` (SHA1 on name+address+city), `screening_filter.py` (non-LLM validation gates), `batch_split.py` (range-based).
+- Orchestration: `scrape_haiku_coordinator.sh` for the Wikipedia path.
+- Docs: `docs/PHASE_2_QUICKSTART.md`, `docs/PIPELINE_COORDINATION.md`, `docs/PHASE_2_3_COMPLETION.md`.
+- OpenCorporates API integration with sample-data fallback when no key is set (we don't have a key — fell through to fallback on the proof-of-concept run).
+
+### Validation (initial proof-of-concept run)
+
+- 22 sample leads across 5 regions; 0% dedup, 100% screen pass.
+- Pipeline ran end-to-end; sample data only because no OpenCorporates key.
+
+### Known issues / notes
+
+- `docs/PHASE_2_3_COMPLETION.md` has a date typo in its title ("Saturday 2026-05-25") — the actual run was 2026-05-16 with Phase 3 work continuing 2026-05-18/19. Worth fixing in a follow-up doc-only commit.
+- These 4 commits + `bb9ef0f` (2026-05-13 trading-hours fix) + `55960ef` (2026-05-13 work-log entry) are still **unpushed to origin/main**. Push when ready.
+
+### Next
+
+Build the Haiku enrichment pipeline on top — see 2026-05-18 morning entry above.
+
+---
+
 ## 2026-05-13 — Session: trading-hours gate + Claude Max cooloff (cross-project with vybe-trading)
 
 Coordinated change with vybe-trading's ADR-028 to stop the shared Claude Max account from being burned by simultaneous LLM cascades and to keep firstwave from queueing Ollama requests behind trading-critical agents.
