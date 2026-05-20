@@ -65,7 +65,7 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 ## Frontend
 - Start: `cd frontend && CHOKIDAR_USEPOLLING=1 npm run dev` (polling required on this machine — inotify limit)
 - Build check: `cd frontend && npm run build`
-- Access: http://localhost:5173 · password: see frontend/.env (VITE_ACCESS_PASSWORD)
+- Access: http://localhost:5173 · sign in with the shared Supabase Auth operator account (email = `VITE_AUTH_EMAIL` in frontend/.env, password set in the Supabase dashboard). RLS requires every session to log in — there is no localhost bypass.
 - Tailscale: http://100.113.88.92:5173
 
 ## Current phase

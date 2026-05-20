@@ -271,6 +271,39 @@ INSERT INTO system_config (key, value) VALUES
   ('daily_discovery_limit', '20');
 ```
 
+### Row Level Security & dashboard authentication
+
+Added 2026-05-20 — see `supabase/migrations/003_schema_wide_rls.sql` plus the
+Supabase Auth swap on the frontend (`frontend/src/AuthGate.jsx`).
+
+**Roles**
+- `service_role` — the backend's `SUPABASE_SERVICE_ROLE_KEY`. Bypasses RLS; full
+  read/write. Every backend write and every backend-only table read uses this.
+- `authenticated` — the logged-in operator. The dashboard signs in with a single
+  shared Supabase Auth account (`supabase.auth.signInWithPassword`). SELECT-only,
+  and only on the five tables the dashboard reads.
+- `anon` — the public key shipped in the browser bundle. Locked out of every
+  table (no policy + `REVOKE ALL`); used only to bootstrap the auth login call.
+
+**Per-table policy**
+
+| Tables | RLS | `authenticated` | `anon` |
+|--------|-----|-----------------|--------|
+| leads, investor_targets, meetings, voice_commands, email_sequences | on | SELECT (all rows) | none |
+| companies, system_config | on | none | none |
+| suppression_list | on (migration 002) | none | none |
+
+Writes from the browser are blocked everywhere — no INSERT/UPDATE/DELETE policy
+exists, so RLS default-deny applies. All writes go through the service-role backend.
+
+**Operational rules**
+- Public sign-up MUST stay disabled in the Supabase dashboard — a self-registered
+  user would land in the `authenticated` role and read all PII.
+- A new dashboard-read table needs a matching `authenticated` SELECT policy plus a
+  `GRANT SELECT ... TO authenticated`, or its queries silently return empty.
+- The FastAPI backend has no auth of its own and is publicly tunnelled at
+  `firstwave.vybe-dev.com` — a separate hardening task, tracked in WORK_LOG.
+
 ---
 
 ## 6. SYSTEM PROMPTS

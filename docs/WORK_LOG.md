@@ -1,6 +1,59 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-20 — Session: schema-wide RLS + Supabase Auth (branch `feat/rls-auth-layer`)
+
+Built on `feat/rls-auth-layer` (off `feat/email-compliance-layer`) — **not merged**.
+Closes the gap flagged in the email-compliance entry below: every table except
+`suppression_list` ran with no RLS, so the public anon key could read, write, and
+delete every row, and the dashboard `PasswordGate` was a client-side string compare,
+not real auth. Goal: make the lead/investor PII genuinely non-public.
+
+### Built
+
+- **Migration `supabase/migrations/003_schema_wide_rls.sql`** — enables RLS on all
+  7 unprotected tables (`companies`, `leads`, `investor_targets`, `meetings`,
+  `email_sequences`, `voice_commands`, `system_config`); adds `authenticated`
+  SELECT policies on the 5 the dashboard reads; `REVOKE ALL ... FROM anon` on every
+  table as a second lock. No write policies — RLS default-deny blocks browser
+  writes; the service-role backend is unaffected. Idempotent, transaction-wrapped.
+  `schema.sql` updated to match for fresh builds.
+- **Frontend Supabase Auth** — `PasswordGate.jsx` replaced by `AuthGate.jsx`: real
+  `supabase.auth.signInWithPassword` against a single shared operator account,
+  session restored via `getSession()` + `onAuthStateChange`. Removed the
+  localhost/Tailscale auth bypass — RLS now requires every session to be
+  `authenticated`. Sign-out button added to `TopBar`. `VITE_ACCESS_PASSWORD`
+  retired; new `VITE_AUTH_EMAIL` (frontend `.env.example` updated).
+- Docs: RLS/auth model documented in `FIRSTWAVE_SYSTEM_CONTEXT.md` §5; `CLAUDE.md`
+  frontend access line updated.
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `npm run build` | ✓ clean (1.0 MB bundle) |
+| Migration SQL — transaction-wrapped, idempotent, reviewed | ✓ |
+
+### Cutover — Liam's manual steps, IN THIS ORDER (avoids a broken window)
+1. Supabase dashboard → Authentication → create the operator user (email + password).
+2. Authentication → Email provider → **disable "Allow new users to sign up"** —
+   critical; a self-registered user lands in `authenticated` and reads all PII.
+3. Set `VITE_AUTH_EMAIL` in `frontend/.env` (+ Vercel env), deploy the frontend
+   AuthGate build, confirm login works.
+4. Run `003_schema_wide_rls.sql` in the Supabase SQL editor — this is the moment
+   the anon key loses read access, so it goes last.
+
+### Known issues / outstanding
+- **The FastAPI backend has no authentication** and is publicly tunnelled at
+  `firstwave.vybe-dev.com` — `GET /leads` etc. are open to anyone. RLS does not
+  cover this; it is the second door. Needs backend auth (API key) or tunnel
+  restriction — a dedicated follow-up task.
+- Migration 003 not yet run on the live DB (gated on the cutover above).
+- `unsubscribe_token` stays readable by `authenticated` — acceptable now the anon
+  key is locked out (only the trusted operator session sees it). Optional further
+  hardening: move it to a backend-only table or column-revoke it.
+- Branch not merged; merging auto-deploys the backend to the Pi.
+
+---
 ## 2026-05-20 — Session: email-compliance layer (branch `feat/email-compliance-layer`)
 
 Built on the `feat/email-compliance-layer` branch — **not merged to `main`**. The
