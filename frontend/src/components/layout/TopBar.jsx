@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
+import { LogOut } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export function TopBar({ title }) {
   const [time, setTime] = useState(new Date())
@@ -22,6 +24,14 @@ export function TopBar({ title }) {
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
           Live
         </span>
+        <button
+          onClick={() => supabase.auth.signOut()}
+          title="Sign out"
+          className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Sign out
+        </button>
       </div>
     </header>
   )
