@@ -1,0 +1,10 @@
+--
+First Wave AI · [LEGAL ENTITY NAME — fill in: e.g. "First Wave AI GmbH"]
+[REGISTERED POSTAL ADDRESS — line 1]
+[REGISTERED POSTAL ADDRESS — line 2, postcode, city, country]
+
+You're receiving this email because we believe First Wave AI is relevant to your
+hotel's operations. If you'd rather not hear from us, unsubscribe here — one click,
+no reply needed: {unsubscribe_url}
+
+How we handle your data and your right to object: https://firstwaveai.com/privacy

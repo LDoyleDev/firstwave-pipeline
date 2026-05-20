@@ -40,6 +40,15 @@ CREATE TABLE leads (
   sequence_step INTEGER DEFAULT 0,
   last_contacted_at TIMESTAMPTZ,
   next_action_at TIMESTAMPTZ,
+  -- Compliance (see migrations/002_compliance_layer.sql)
+  country TEXT, -- normalised ISO 3166-1 alpha-2
+  email_source TEXT, -- website_published | osm_tag | apollo | manual
+  email_sourced_at TIMESTAMPTZ,
+  email_address_type TEXT, -- generic_role | named_individual
+  unsubscribe_token UUID DEFAULT gen_random_uuid(),
+  jurisdiction_route TEXT, -- A | B | C | do_not_send
+  consent_basis TEXT DEFAULT 'legitimate_interest',
+  suppressed_at TIMESTAMPTZ,
   -- Meta
   source TEXT, -- 'phantombuster_linkedin' | 'apollo' | 'manual' | 'itb_list'
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -118,6 +127,17 @@ CREATE TABLE email_sequences (
   gmail_message_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- SUPPRESSION LIST (global do-not-email — see migrations/002_compliance_layer.sql)
+CREATE TABLE suppression_list (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  reason TEXT NOT NULL, -- unsubscribe | bounce | complaint | manual
+  source_campaign TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_suppression_email ON suppression_list (lower(email));
 
 -- VOICE COMMANDS LOG
 CREATE TABLE voice_commands (
