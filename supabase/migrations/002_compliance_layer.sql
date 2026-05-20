@@ -14,6 +14,11 @@ CREATE TABLE IF NOT EXISTS suppression_list (
 -- Case-insensitive uniqueness: 'Liam@x.com' and 'liam@x.com' are one entry.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_suppression_email ON suppression_list (lower(email));
 
+-- RLS: this table is backend-only. The API uses the service-role key (which
+-- bypasses RLS); enabling RLS with NO policies locks out the anon/authenticated
+-- keys — and therefore the browser frontend — from these email addresses.
+ALTER TABLE suppression_list ENABLE ROW LEVEL SECURITY;
+
 -- Compliance columns on leads.
 -- country: normalised ISO 3166-1 alpha-2 (was only buried in free-text `location`).
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS country TEXT;

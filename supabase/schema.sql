@@ -138,6 +138,8 @@ CREATE TABLE suppression_list (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_suppression_email ON suppression_list (lower(email));
+-- Backend-only table — RLS on, no policies (service-role key bypasses RLS).
+ALTER TABLE suppression_list ENABLE ROW LEVEL SECURITY;
 
 -- VOICE COMMANDS LOG
 CREATE TABLE voice_commands (
