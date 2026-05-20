@@ -301,8 +301,11 @@ exists, so RLS default-deny applies. All writes go through the service-role back
   user would land in the `authenticated` role and read all PII.
 - A new dashboard-read table needs a matching `authenticated` SELECT policy plus a
   `GRANT SELECT ... TO authenticated`, or its queries silently return empty.
-- The FastAPI backend has no auth of its own and is publicly tunnelled at
-  `firstwave.vybe-dev.com` — a separate hardening task, tracked in WORK_LOG.
+- The FastAPI backend (publicly tunnelled at `firstwave.vybe-dev.com`) gates every
+  route except `/health`, `/u/{token}`, and `/webhook/telegram` behind an
+  `X-API-Key` header matching `BACKEND_API_KEY` — see `backend/auth.py`. It fails
+  closed (503) if the key is unset. The n8n crons and the dev dashboard send the
+  key; the production dashboard is read-only and carries none.
 
 ---
 
@@ -406,6 +409,7 @@ APP_ENV=development
 APP_PORT=8000
 FRONTEND_PORT=5173
 OPERATOR_TIMEZONE=Europe/Berlin
+BACKEND_API_KEY=          # X-API-Key gate for non-public routes (backend/auth.py)
 ```
 
 ---

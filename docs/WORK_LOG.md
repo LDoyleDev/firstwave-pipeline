@@ -1,7 +1,7 @@
 # FirstWave Pipeline — Work Log
 
 ---
-## 2026-05-20 — Session: schema-wide RLS + Supabase Auth (branch `feat/rls-auth-layer`)
+## 2026-05-20 — Session: PII lockdown — RLS, Supabase Auth, backend API-key (branch `feat/rls-auth-layer`)
 
 Built on `feat/rls-auth-layer` (off `feat/email-compliance-layer`) — **not merged**.
 Closes the gap flagged in the email-compliance entry below: every table except
@@ -24,16 +24,26 @@ not real auth. Goal: make the lead/investor PII genuinely non-public.
   localhost/Tailscale auth bypass — RLS now requires every session to be
   `authenticated`. Sign-out button added to `TopBar`. `VITE_ACCESS_PASSWORD`
   retired; new `VITE_AUTH_EMAIL` (frontend `.env.example` updated).
-- Docs: RLS/auth model documented in `FIRSTWAVE_SYSTEM_CONTEXT.md` §5; `CLAUDE.md`
-  frontend access line updated.
+- **Backend API-key auth** — `backend/auth.py`: an `X-API-Key` middleware gates
+  every route except `/health`, `/u/{token}`, and `/webhook/telegram`. Fails
+  closed (503) if `BACKEND_API_KEY` is unset — a missing key never means "open".
+  Wired in `main.py` inner of CORS so 401s still carry CORS headers. The 8 n8n
+  cron workflows now send the key via `={{ $env.BACKEND_API_KEY }}`; the dev
+  dashboard sends it via `VITE_API_KEY` (`frontend/src/api/client.js`).
+- Docs: RLS/auth + backend API-key model documented in
+  `FIRSTWAVE_SYSTEM_CONTEXT.md` §5/§9; `CLAUDE.md` frontend access line updated.
 
 ### Validation
 | Check | Result |
 |-------|--------|
 | `npm run build` | ✓ clean (1.0 MB bundle) |
 | Migration SQL — transaction-wrapped, idempotent, reviewed | ✓ |
+| `from backend.main import app` (placeholder env) | ✓ — 53 routes; middleware CORS→TrustedHost→api_key |
+| 8 n8n workflow JSONs re-validated after the header patch | ✓ |
 
-### Cutover — Liam's manual steps, IN THIS ORDER (avoids a broken window)
+### Cutover — Liam's manual steps
+
+**RLS + Supabase Auth — IN THIS ORDER (avoids a broken window):**
 1. Supabase dashboard → Authentication → create the operator user (email + password).
 2. Authentication → Email provider → **disable "Allow new users to sign up"** —
    critical; a self-registered user lands in `authenticated` and reads all PII.
@@ -42,16 +52,26 @@ not real auth. Goal: make the lead/investor PII genuinely non-public.
 4. Run `003_schema_wide_rls.sql` in the Supabase SQL editor — this is the moment
    the anon key loses read access, so it goes last.
 
+**Backend API-key — BEFORE the branch merges (merge auto-deploys the Pi):**
+5. Generate one secret value. Set `BACKEND_API_KEY` to it in the Pi's `.env`, in
+   the n8n environment (so `$env.BACKEND_API_KEY` resolves), and as `VITE_API_KEY`
+   in the dev `frontend/.env` — all three the same value.
+6. Re-import the 8 updated workflows from `n8n-workflows/` into n8n, then
+   deactivate+reactivate each (the running copy is cached in sqlite).
+   ⚠️ If `BACKEND_API_KEY` is missing from the Pi `.env` when the branch deploys,
+   the backend fails closed and 503s every non-public route.
+
 ### Known issues / outstanding
-- **The FastAPI backend has no authentication** and is publicly tunnelled at
-  `firstwave.vybe-dev.com` — `GET /leads` etc. are open to anyone. RLS does not
-  cover this; it is the second door. Needs backend auth (API key) or tunnel
-  restriction — a dedicated follow-up task.
+- `/webhook/telegram` stays unauthenticated by design (Telegram's servers cannot
+  send our key) — so it is spoofable; anyone can POST a fake update. Optional
+  hardening: register the webhook with a secret token and verify the
+  `X-Telegram-Bot-Api-Secret-Token` header.
 - Migration 003 not yet run on the live DB (gated on the cutover above).
 - `unsubscribe_token` stays readable by `authenticated` — acceptable now the anon
   key is locked out (only the trusted operator session sees it). Optional further
   hardening: move it to a backend-only table or column-revoke it.
-- Branch not merged; merging auto-deploys the backend to the Pi.
+- Branch not merged; merging auto-deploys the backend to the Pi — see cutover
+  step 5 (`BACKEND_API_KEY` must exist on the Pi first, or the backend 503s).
 
 ---
 ## 2026-05-20 — Session: email-compliance layer (branch `feat/email-compliance-layer`)
