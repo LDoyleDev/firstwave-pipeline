@@ -8,9 +8,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
+from backend.auth import api_key_middleware
 from backend.routers import leads, investors, meetings, sequences, voice, discovery, actions, status, analytics, compliance
 
 app = FastAPI(title="FirstWave Pipeline", version="1.0.0")
+
+# API-key gate. Registered first so it ends up INNERMOST — CORS (registered last,
+# below) stays outermost and so adds its headers even to 401/503 responses.
+app.middleware("http")(api_key_middleware)
 
 # Host allow-list — the /u/{token} compliance routes are public-facing.
 # Override via the ALLOWED_HOSTS env var (comma-separated) if a caller is missed.

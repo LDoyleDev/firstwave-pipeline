@@ -3,10 +3,13 @@
   "nodes": [
     {
       "id": "cron-daily-investor",
-      "name": "Daily 02:00 Mon–Fri",
+      "name": "Daily 02:00 Mon\u2013Fri",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "triggerTimes": {
           "item": [
@@ -23,12 +26,24 @@
       "name": "POST /actions/enrich-investors-batch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:8001/actions/enrich-investors-batch",
         "options": {
           "timeout": 300000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.BACKEND_API_KEY }}"
+            }
+          ]
         }
       }
     },
@@ -37,18 +52,30 @@
       "name": "POST /actions/generate-investor-outreach-batch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:8001/actions/generate-investor-outreach-batch",
         "options": {
           "timeout": 300000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.BACKEND_API_KEY }}"
+            }
+          ]
         }
       }
     }
   ],
   "connections": {
-    "Daily 02:00 Mon–Fri": {
+    "Daily 02:00 Mon\u2013Fri": {
       "main": [
         [
           {
@@ -72,6 +99,6 @@
     }
   },
   "active": true,
-  "description": "Daily Mon–Fri 02:00 CET: enrich new investor targets (identified → research_needed), then generate outreach drafts (research_needed → ready_to_contact). Runs overnight to avoid Ollama contention with vybe-trading (which owns 07:00–22:00 CET). Both steps are idempotent.",
+  "description": "Daily Mon\u2013Fri 02:00 CET: enrich new investor targets (identified \u2192 research_needed), then generate outreach drafts (research_needed \u2192 ready_to_contact). Runs overnight to avoid Ollama contention with vybe-trading (which owns 07:00\u201322:00 CET). Both steps are idempotent.",
   "id": "b3f12a88-5c21-4e7b-9d3a-1f8e4c2b7a96"
 }
