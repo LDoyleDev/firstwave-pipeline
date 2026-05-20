@@ -254,3 +254,22 @@ Track: Client | Investor
 **One thing to avoid** (common mistake for this persona)
 
 Keep it punchy. Liam reads this on his phone 30 minutes before the call."""
+
+
+# --- Email-sourcing pipeline (scripts/source_emails.py) ----------------------
+# Backstop for the deterministic opt-out phrase list — catches paraphrased
+# "no unsolicited email" statements a fixed phrase list would miss. Used via
+# anthropic_client.classify(); the page's visible text is passed as the message.
+
+DISCLAIMER_CLASSIFIER_SYSTEM_PROMPT = """You classify whether a business web page asks visitors NOT to send it unsolicited commercial or marketing email.
+
+You are given the visible text of a hotel's contact or about page. Decide ONE thing: does the page contain a statement restricting unsolicited commercial email, sales solicitation, or marketing messages sent to the business?
+
+Count as RESTRICTED: an explicit request not to receive unsolicited, marketing, or sales email — "no unsolicited", "we do not accept marketing enquiries", "do not add us to mailing lists", "this inbox is not for sales offers", or equivalent wording in any language.
+
+Count as CLEAR: an ordinary contact page with no such restriction. A generic privacy policy, a cookie notice, or a "we hate spam" line beside a newsletter sign-up do NOT count as restrictions.
+
+Respond with EXACTLY one line and nothing else — either:
+VERDICT: RESTRICTED
+or:
+VERDICT: CLEAR"""

@@ -12,7 +12,9 @@ from backend.integrations.supabase_client import supabase
 
 logger = logging.getLogger(__name__)
 
-VALID_REASONS = ("unsubscribe", "bounce", "complaint", "manual")
+# source_optout: the address's own publisher stated it does not want unsolicited
+# email (found during email sourcing) — never cold-email it.
+VALID_REASONS = ("unsubscribe", "bounce", "complaint", "manual", "source_optout")
 
 
 def _norm(email: str) -> str:
