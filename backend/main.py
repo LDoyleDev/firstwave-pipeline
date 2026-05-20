@@ -1,13 +1,26 @@
+import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from backend.routers import leads, investors, meetings, sequences, voice, discovery, actions, status, analytics
+from backend.routers import leads, investors, meetings, sequences, voice, discovery, actions, status, analytics, compliance
 
 app = FastAPI(title="FirstWave Pipeline", version="1.0.0")
+
+# Host allow-list — the /u/{token} compliance routes are public-facing.
+# Override via the ALLOWED_HOSTS env var (comma-separated) if a caller is missed.
+_allowed_hosts = [
+    h.strip() for h in os.getenv(
+        "ALLOWED_HOSTS",
+        "firstwave.vybe-dev.com,localhost,127.0.0.1,100.108.149.115",
+    ).split(",") if h.strip()
+]
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +45,8 @@ app.include_router(voice.router, tags=["voice"])  # paths defined in router: /we
 app.include_router(actions.router, prefix="/actions", tags=["actions"])
 app.include_router(status.router, prefix="/status", tags=["status"])
 app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+# compliance router owns /u/* and /suppress — no prefix, paths defined in router
+app.include_router(compliance.router, tags=["compliance"])
 
 
 @app.get("/health")

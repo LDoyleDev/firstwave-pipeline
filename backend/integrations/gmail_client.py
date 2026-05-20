@@ -1,6 +1,7 @@
 import base64
 import logging
 import os
+import re
 from email.mime.text import MIMEText
 from typing import Optional
 
@@ -30,11 +31,15 @@ def _get_credentials() -> Credentials:
     return creds
 
 
+UNSUBSCRIBE_MAILTO = os.getenv("UNSUBSCRIBE_MAILTO", "unsubscribe@firstwaveai.com")
+
+
 def send_email(
     to: str,
     subject: str,
     body: str,
     reply_to_message_id: Optional[str] = None,
+    unsubscribe_url: Optional[str] = None,
 ) -> str:
     """Send a plain-text email from liam@firstwaveai.com.
 
@@ -43,6 +48,9 @@ def send_email(
         subject: Email subject line.
         body: Plain-text body (no HTML — keeps deliverability high).
         reply_to_message_id: gmail_message_id of the email being replied to (sets threading headers).
+        unsubscribe_url: per-recipient one-click unsubscribe URL. When set, adds the
+            RFC 8058 List-Unsubscribe / List-Unsubscribe-Post headers. Required for
+            compliant marketing email — see backend/routers/compliance.py.
 
     Returns:
         gmail_message_id of the sent message.
@@ -57,6 +65,10 @@ def send_email(
     if reply_to_message_id:
         msg["In-Reply-To"] = reply_to_message_id
         msg["References"] = reply_to_message_id
+
+    if unsubscribe_url:
+        msg["List-Unsubscribe"] = f"<{unsubscribe_url}>, <mailto:{UNSUBSCRIBE_MAILTO}?subject=unsubscribe>"
+        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     result = service.users().messages().send(userId="me", body={"raw": raw}).execute()
@@ -100,3 +112,75 @@ def check_replies(gmail_message_ids: list[str]) -> list[dict]:
             results.append({"gmail_message_id": gm_id, "replied": False, "reply_snippet": None})
 
     return results
+
+
+# Failed-recipient / DSN-status patterns for bounce parsing (RFC 3464).
+_FAILED_RECIPIENT_RE = re.compile(
+    r"(?:Final-Recipient:\s*rfc822;|X-Failed-Recipients:|Original-Recipient:\s*rfc822;)\s*"
+    r"([^\s<>]+@[^\s<>]+)",
+    re.IGNORECASE,
+)
+_DSN_STATUS_RE = re.compile(r"Status:\s*([245])\.\d+\.\d+", re.IGNORECASE)
+
+
+def detect_bounces(newer_than_days: int = 2) -> list[dict]:
+    """Scan the mailbox for delivery-failure notices (NDRs) and extract failures.
+
+    Gmail has no push bounce API for sent mail — bounces arrive as Mailer-Daemon
+    messages. Uses the existing gmail.readonly scope.
+
+    Args:
+        newer_than_days: how far back to scan.
+
+    Returns:
+        List of {email, bounce_type: 'hard'|'soft', diagnostic}. 'hard' = a 5.x.x
+        DSN status (permanent — suppress); 'soft' = 4.x.x (transient — log only).
+    """
+    service = build("gmail", "v1", credentials=_get_credentials())
+    query = (
+        f"newer_than:{newer_than_days}d "
+        "(from:mailer-daemon OR from:postmaster) "
+        "subject:(delivery OR undeliverable OR failure OR returned OR failed)"
+    )
+    bounces: list[dict] = []
+    seen: set[str] = set()
+    try:
+        listing = service.users().messages().list(userId="me", q=query, maxResults=100).execute()
+    except Exception:
+        logger.exception("Bounce scan: message list failed")
+        return bounces
+
+    for ref in listing.get("messages", []):
+        try:
+            full = service.users().messages().get(userId="me", id=ref["id"], format="raw").execute()
+            raw = base64.urlsafe_b64decode(full["raw"].encode()).decode("utf-8", errors="ignore")
+        except Exception:
+            logger.warning("Bounce scan: could not fetch message %s", ref.get("id"))
+            continue
+
+        rcpt_match = _FAILED_RECIPIENT_RE.search(raw)
+        if not rcpt_match:
+            continue
+        email_addr = rcpt_match.group(1).strip().strip("<>").lower()
+        if email_addr in seen:
+            continue
+        seen.add(email_addr)
+
+        status_match = _DSN_STATUS_RE.search(raw)
+        bounce_type = "soft"
+        if status_match and status_match.group(1) == "5":
+            bounce_type = "hard"
+        elif status_match and status_match.group(1) == "4":
+            bounce_type = "soft"
+        elif not status_match:
+            # No machine-readable status — treat as hard (NDR subject implies failure).
+            bounce_type = "hard"
+
+        bounces.append({
+            "email": email_addr,
+            "bounce_type": bounce_type,
+            "diagnostic": status_match.group(0) if status_match else "no DSN status",
+        })
+
+    logger.info("Bounce scan: %d distinct failed recipients", len(bounces))
+    return bounces
