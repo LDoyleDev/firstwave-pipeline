@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.integrations.supabase_client import supabase
-from backend.integrations import gmail_client
+from backend.integrations import gmail_client, suppression
 
 router = APIRouter()
 
@@ -30,6 +30,13 @@ class LeadUpdate(BaseModel):
     outreach_email_1: Optional[str] = None
     outreach_email_2: Optional[str] = None
     next_action_at: Optional[str] = None
+    # Compliance provenance — prefer the set_lead_email() helper for the email path
+    email: Optional[str] = None
+    country: Optional[str] = None
+    email_source: Optional[str] = None
+    email_address_type: Optional[str] = None
+    jurisdiction_route: Optional[str] = None
+    consent_basis: Optional[str] = None
 
 
 @router.get("")
@@ -112,6 +119,10 @@ def send_reply(lead_id: str) -> dict:
     draft = lead.get("pending_reply_draft", "")
     if not draft:
         raise HTTPException(status_code=400, detail="No pending reply draft for this lead")
+
+    # Compliance: never email an address on the suppression list, even a reply.
+    if suppression.is_suppressed(lead.get("email", "")):
+        raise HTTPException(status_code=409, detail="Recipient is on the suppression list")
 
     # Thread against the most recent sent sequence
     seq_rows = (

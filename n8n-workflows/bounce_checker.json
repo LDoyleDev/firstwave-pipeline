@@ -1,0 +1,59 @@
+{
+  "name": "Bounce Checker",
+  "nodes": [
+    {
+      "id": "cron-every-6h",
+      "name": "Every 6 Hours Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 6,
+              "unit": "hours"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-process-bounces",
+      "name": "POST /sequences/process-bounces",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8001/sequences/process-bounces",
+        "options": {
+          "timeout": 120000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 6 Hours Trigger": {
+      "main": [
+        [
+          {
+            "node": "POST /sequences/process-bounces",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "description": "Runs every 6 hours. Scans the mailbox for delivery-failure notices and adds hard-bounced addresses to the global suppression list.",
+  "id": "b07c3a2e-6d41-4f88-9c2a-1e5d7f0a2b93"
+}

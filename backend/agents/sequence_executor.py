@@ -1,17 +1,19 @@
 import asyncio
 import logging
+import os
 import random
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from backend.integrations.supabase_client import supabase
-from backend.integrations import gmail_client, telegram_bot
+from backend.integrations import gmail_client, telegram_bot, suppression, jurisdiction, email_footer
 
 logger = logging.getLogger(__name__)
 
 _BERLIN_OFFSET = timedelta(hours=2)  # CEST — close enough for send-window scheduling
 _SEND_WINDOW_START = 9   # 09:00 Berlin
 _SEND_WINDOW_END = 17    # 17:00 Berlin
+_PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://firstwave.vybe-dev.com").rstrip("/")
 
 
 def _now_utc() -> datetime:
@@ -232,7 +234,8 @@ def process_due_sequences() -> dict:
     """
     now = _now_utc()
     result = supabase.table("email_sequences").select(
-        "*, leads(id, first_name, last_name, email, pipeline_stage, outreach_approved), "
+        "*, leads(id, first_name, last_name, email, pipeline_stage, outreach_approved, "
+        "unsubscribe_token, country, email_source, suppressed_at), "
         "investor_targets(id, firm_name, contact_name, contact_email, pipeline_stage, outreach_approved)"
     ).eq("status", "pending").lte("scheduled_for", now.isoformat()).execute()
 
@@ -299,6 +302,35 @@ def process_due_sequences() -> dict:
                 skipped += 1
                 continue
 
+            # Compliance gate 1: global suppression (applies to both tracks)
+            if suppression.is_suppressed(email):
+                supabase.table("email_sequences").update({
+                    "status": "skipped",
+                }).eq("id", seq_id).execute()
+                logger.info("Sequence %s skipped — address %s is suppressed", seq_id, email)
+                skipped += 1
+                continue
+
+            # Compliance gate 2: jurisdiction + per-lead unsubscribe link (client track only)
+            unsubscribe_url: Optional[str] = None
+            if track == "client":
+                allowed, reason = jurisdiction.is_sendable(
+                    entity.get("country"), entity.get("email_source")
+                )
+                if not allowed:
+                    supabase.table("email_sequences").update({
+                        "status": "skipped",
+                    }).eq("id", seq_id).execute()
+                    logger.info("Sequence %s skipped — jurisdiction gate (%s)", seq_id, reason)
+                    skipped += 1
+                    continue
+                token = entity.get("unsubscribe_token")
+                if not token:
+                    logger.warning("Sequence %s skipped — lead has no unsubscribe_token", seq_id)
+                    skipped += 1
+                    continue
+                unsubscribe_url = f"{_PUBLIC_BASE_URL}/u/{token}"
+
             # Find the previous step's gmail_message_id for threading
             reply_to = None
             if seq["step_number"] > 1:
@@ -317,11 +349,17 @@ def process_due_sequences() -> dict:
                 body = generate_closing_email(entity_id, track, original_subject)
                 supabase.table("email_sequences").update({"body": body}).eq("id", seq_id).execute()
 
+            # Append the compliance footer (sender ID + postal address + unsubscribe).
+            # Done after the raw body is persisted so the stored body stays footer-free.
+            if unsubscribe_url:
+                body = email_footer.append_footer(body, unsubscribe_url)
+
             gmail_id = gmail_client.send_email(
                 to=email,
                 subject=seq.get("subject", ""),
                 body=body,
                 reply_to_message_id=reply_to,
+                unsubscribe_url=unsubscribe_url,
             )
 
             supabase.table("email_sequences").update({
@@ -519,3 +557,46 @@ def identify_reengagement_candidates(days_cold: int = 30) -> list[str]:
 
     logger.info("Re-engagement candidates (%d day threshold): %d leads", days_cold, len(candidates))
     return candidates
+
+
+def process_bounces() -> dict:
+    """Scan the mailbox for delivery-failure notices and suppress hard bounces.
+
+    Hard bounces (5.x.x) are added to the global suppression list and the matching
+    sent sequence rows are marked 'bounced'. Soft bounces (4.x.x) are logged only.
+
+    Returns:
+        Summary dict with counts.
+    """
+    try:
+        bounces = gmail_client.detect_bounces(newer_than_days=2)
+    except Exception:
+        logger.exception("Bounce detection failed")
+        return {"checked": 0, "hard": 0, "soft": 0}
+
+    hard = 0
+    soft = 0
+    for b in bounces:
+        if b.get("bounce_type") == "hard":
+            suppression.add_suppression(
+                b["email"], reason="bounce", source_campaign="gmail_ndr", notes=b.get("diagnostic")
+            )
+            try:
+                leads = supabase.table("leads").select("id").eq("email", b["email"]).execute().data or []
+                for lead in leads:
+                    supabase.table("email_sequences").update({"status": "bounced"}).eq(
+                        "lead_id", lead["id"]
+                    ).eq("status", "sent").execute()
+            except Exception:
+                logger.exception("Failed to mark bounced sequences for %s", b["email"])
+            hard += 1
+        else:
+            logger.info("Soft bounce (not suppressed): %s", b["email"])
+            soft += 1
+
+    if hard:
+        _send_telegram(f"⚠️ {hard} hard email bounce(s) detected and suppressed.")
+
+    summary = {"checked": len(bounces), "hard": hard, "soft": soft}
+    logger.info("Bounce run complete: %s", summary)
+    return summary

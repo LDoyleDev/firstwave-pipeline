@@ -42,8 +42,17 @@ def get_review_queue() -> dict:
         "tier", desc=False
     ).execute()
 
+    # Annotate each client lead with its compliance route so the operator can see
+    # at a glance whether approving it will actually result in a send.
+    from backend.integrations import jurisdiction
+    client_rows = client_result.data or []
+    for row in client_rows:
+        row["jurisdiction_route"] = row.get("jurisdiction_route") or jurisdiction.classify(
+            row.get("country")
+        )
+
     return {
-        "client": client_result.data or [],
+        "client": client_rows,
         "investor": investor_result.data or [],
         "totals": {
             "client": len(client_result.data or []),
@@ -227,6 +236,13 @@ def check_replies() -> dict:
     from backend.agents.sequence_executor import check_all_replies
     check_all_replies()
     return {"status": "ok"}
+
+
+@router.post("/sequences/process-bounces")
+def process_bounces_endpoint() -> dict:
+    """Scan for delivery-failure notices and suppress hard bounces. Called by n8n."""
+    from backend.agents.sequence_executor import process_bounces
+    return process_bounces()
 
 
 @router.get("/sequences")
