@@ -347,6 +347,13 @@ def tier3_website_scrape(leads: list[dict], dry_run: bool,
                 checkpoint(l["id"], 3, "pending_confirm")
                 stats["tier3_pending_confirm"] += 1
                 continue
+            except Exception:
+                # LLM reachable-but-failing (Ollama down, CLI error, ...) —
+                # defer this lead rather than abort the whole run.
+                logger.exception("Tier 3: %s — disclaimer classify failed, deferring", l["id"])
+                checkpoint(l["id"], 3, "pending_confirm")
+                stats["tier3_classify_error"] += 1
+                continue
             if verdict == "restricted":
                 _skip_disclaimer(l, email, src_url, "haiku verdict", dry_run, stats)
                 continue
