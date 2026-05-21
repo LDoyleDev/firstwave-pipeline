@@ -80,7 +80,14 @@ def load_checkpoint() -> dict[str, str]:
     return done
 
 
+# Set by main(). When dry-running, checkpoint() is a no-op — a dry run must
+# never poison the resume state of a later live run.
+_DRY_RUN = False
+
+
 def checkpoint(lead_id: str, tier: int, result: str) -> None:
+    if _DRY_RUN:
+        return
     CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
     with open(CHECKPOINT, "a") as f:
         f.write(json.dumps({
@@ -93,8 +100,12 @@ def checkpoint(lead_id: str, tier: int, result: str) -> None:
 # Tier 0 — scope reduction
 # --------------------------------------------------------------------------
 
-def load_working_set(limit: int | None) -> list[dict]:
-    """Approved, non-suppressed, email-less leads on a sendable route (A/B)."""
+def load_working_set(limit: int | None, dry_run: bool) -> list[dict]:
+    """Approved, non-suppressed, email-less leads on a sendable route (A/B).
+
+    Also backfills `leads.country`: the existing leads predate the
+    country-persistence code, so country is derived (zero-token) from the
+    trailing field of `location` and — on a live run — written back."""
     rows: list[dict] = []
     offset = 0
     while True:  # Supabase caps a select at 1000 rows.
@@ -112,7 +123,8 @@ def load_working_set(limit: int | None) -> list[dict]:
         offset += 1000
 
     working: list[dict] = []
-    skipped = Counter()
+    skipped: Counter = Counter()
+    backfilled = 0
     for ld in rows:
         if (ld.get("email") or "").strip():
             skipped["already_emailed"] += 1
@@ -120,14 +132,27 @@ def load_working_set(limit: int | None) -> list[dict]:
         if ld.get("suppressed_at"):
             skipped["suppressed"] += 1
             continue
+        # Country backfill — derive from the trailing field of `location`.
+        if not (ld.get("country") or "").strip():
+            loc = (ld.get("location") or "").strip()
+            iso = jurisdiction.to_iso(loc.split(",")[-1].strip()) if loc else None
+            if iso:
+                ld["country"] = iso
+                backfilled += 1
+                if not dry_run:
+                    supabase.table("leads").update({
+                        "country": iso,
+                        "jurisdiction_route": jurisdiction.classify(iso),
+                    }).eq("id", ld["id"]).execute()
         route = jurisdiction.classify(ld.get("country"))
         if route in ("C", "do_not_send"):
             skipped[f"route_{route}"] += 1
             continue
         ld["_route"] = route
         working.append(ld)
-    logger.info("Tier 0: %d approved leads → %d in scope (skipped: %s)",
-                len(rows), len(working), dict(skipped))
+    logger.info("Tier 0: %d approved leads → %d in scope "
+                "(country backfilled: %d, skipped: %s)",
+                len(rows), len(working), backfilled, dict(skipped))
     return working[:limit] if limit else working
 
 
@@ -198,14 +223,15 @@ def _match_against(leads: list[dict], exact_idx: dict, fuzzy_idx: dict) -> None:
 def tier2_osm_emails(leads: list[dict], dry_run: bool, stats: Counter) -> None:
     """OSM `contact:email` addresses. Route A only — osm_tag is not a published
     source, so a Route B lead must wait for Tier 3."""
-    from backend.integrations.email_extractor import is_junk  # local: keep header lean
-
     for l in leads:
         if l.get("_emailed"):
             continue
         rec = l.get("_match")
-        email = (rec or {}).get("email", "").strip().lower()
-        if not email or is_junk(email):
+        # OSM email tags can carry a 'mailto:' scheme or several addresses —
+        # normalise + junk-filter through the extractor; take the first.
+        cands = extract_emails((rec or {}).get("email", ""))
+        email = cands[0] if cands else None
+        if not email:
             continue
         if l["_route"] != "A":
             stats["tier2_route_b_osm_skipped"] += 1
@@ -377,8 +403,11 @@ def main() -> int:
                     help="Run the Haiku disclaimer confirm only on borderline pages")
     args = ap.parse_args()
 
+    global _DRY_RUN
+    _DRY_RUN = args.dry_run
+
     done = load_checkpoint()
-    working = load_working_set(args.limit)
+    working = load_working_set(args.limit, args.dry_run)
     # Skip leads already resolved in a prior run (pending_confirm is retried).
     fresh = [l for l in working if done.get(l["id"]) not in _TERMINAL]
     logger.info("%d leads to process (%d already resolved)",
