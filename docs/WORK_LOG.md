@@ -26,7 +26,8 @@ never persisted, so there was nothing in the DB to scrape. Plan:
   scrape JSONs by name+address (fuzzy name+city fallback); `companies` upsert to
   persist recovered websites; `scrape_osm.py` subprocess fallback.
 - **`scripts/source_emails.py`** (new) — orchestrator. Tier 0 scope-reduction
-  (drops Route C / do_not_send); Tier 1 website recovery; Tier 2 OSM-tag emails
+  (backfills `country` from `location` — the existing leads have it NULL — then
+  drops Route C / do_not_send); Tier 1 website recovery; Tier 2 OSM-tag emails
   (Route A only); Tier 3 website scrape + evidence capture. `--dry-run`,
   `--limit`, `--confirm-borderline-only`; checkpoint JSONL for resumability.
 - **`scripts/verify_email_sourcing.py`** (new) — read-only audit: coverage,
@@ -46,7 +47,12 @@ never persisted, so there was nothing in the DB to scrape. Plan:
 |-------|--------|
 | `py_compile` all new/modified files | ✓ |
 | `email_extractor` / `website_recovery` / `website_fetch` unit checks (SP3) | ✓ |
-| Full run | not yet — runs on vybe-desktop (SP3 `.env` is a stub) |
+| `--dry-run --limit 25` on SP3 vs live Supabase | ✓ — 17/25 sourced (10 osm_tag, 7 website_published); 25/25 websites recovered |
+
+vybe-desktop's `.env` was copied to SP3 (2026-05-20→21) so the run executes on
+SP3. The dry-run surfaced + fixed three bugs — see the `fix(sourcing)` commit:
+country NULL on all 901 leads (Tier 0 now backfills it), dry-run poisoning the
+checkpoint, and OSM `mailto:`-prefixed email tags stored verbatim.
 
 ### Run instructions (on vybe-desktop, populated `.env` + scrape data)
 1. `PYTHONPATH=. python scripts/source_emails.py --dry-run --limit 25`
