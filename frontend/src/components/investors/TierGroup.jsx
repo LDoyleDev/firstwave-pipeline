@@ -5,7 +5,7 @@ import { TIER_LABELS } from '@/lib/constants'
 
 export function TierGroup({ tier, investors, defaultOpen = false, onRowClick }) {
   const [open, setOpen] = useState(defaultOpen)
-  const contacted = investors.filter(i => !['identified','research_needed'].includes(i.pipeline_stage)).length
+  const contacted = investors.filter(i => !['identified','research_needed','ready_to_contact'].includes(i.pipeline_stage)).length
 
   return (
     <tbody>
