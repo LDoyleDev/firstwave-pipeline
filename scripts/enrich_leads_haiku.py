@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend.utils.anthropic_client import classify, generate, VybeTradingWindowError
 from backend.integrations.supabase_client import supabase
+from backend.integrations import jurisdiction  # module import — avoids classify() name clash
 
 logging.basicConfig(
     level=logging.INFO,
@@ -306,12 +307,20 @@ def save_to_supabase(batch_result: dict) -> int:
         if verification_status == "discarded":
             continue
 
+        # Compliance provenance: persist email + normalised country so the
+        # send-path jurisdiction gate and the GDPR/CASL audit trail have data.
+        raw_country = lead.get("country")
+        country_iso = jurisdiction.to_iso(raw_country) or raw_country
+        email = (lead.get("email") or "").strip().lower()
+
         record = {
             "first_name": lead["name"].split()[0] if lead["name"] else "Unknown",
             "last_name": " ".join(lead["name"].split()[1:]) if len(lead["name"].split()) > 1 else lead["name"],
             "title": enrichment.get("decision_maker_role", "General Manager") if enrichment else None,
             "phone": lead.get("phone"),
-            "location": f"{lead.get('address')}, {lead.get('country')}",
+            "location": f"{lead.get('address')}, {raw_country}",
+            "country": country_iso,
+            "jurisdiction_route": jurisdiction.classify(raw_country),
             "pipeline_stage": "discovered",
             "enrichment_data": {
                 "raw_name": lead["name"],
@@ -324,6 +333,11 @@ def save_to_supabase(batch_result: dict) -> int:
             "warmth": "cold",
             "lead_score": int(classification["confidence"] * 100),
         }
+        if email and "@" in email:
+            record["email"] = email
+            record["email_source"] = "osm_tag"
+            record["email_sourced_at"] = datetime.now(UTC).isoformat()
+            record["email_address_type"] = "generic_role"
 
         try:
             # Use Supabase to insert

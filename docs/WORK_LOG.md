@@ -1,6 +1,73 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-20 — Session: email-compliance layer (branch `feat/email-compliance-layer`)
+
+Built on the `feat/email-compliance-layer` branch — **not merged to `main`**. The
+overnight DM-research run produced 509 personalised cold-email drafts; before any
+are sent we needed a defensible legal position per jurisdiction and the
+compliance machinery to back it. Plan: `~/.claude/plans/consider-the-work-that-async-snowflake.md`.
+
+### Built (4 commits: `37d7a63`, `2033f46`, `8ae3104`, `d201db8`)
+
+- **Schema** — `supabase/migrations/002_compliance_layer.sql`: `suppression_list`
+  table (RLS enabled, no policies — service-role key bypasses it) + new `leads`
+  columns (`country`, `email_source`, `email_sourced_at`, `email_address_type`,
+  `unsubscribe_token`, `jurisdiction_route`, `consent_basis`, `suppressed_at`).
+  `schema.sql` updated to match. Migration has been run on the live DB.
+- **Jurisdiction routing** — `backend/config/jurisdiction_policy.py` maps every
+  country to a route: A (EU/EEA legitimate-interest + opt-out), B (Canada/
+  Australia/NZ implied-consent — requires a `website_published` email source),
+  C (Germany/Austria/Switzerland — prior consent required, no cold-email route),
+  `do_not_send` (fail-closed default). `backend/integrations/jurisdiction.py`
+  classifies + gates.
+- **Suppression** — `backend/integrations/suppression.py`: global do-not-email
+  list; `is_suppressed()` fails safe (treats lookup failure as suppressed).
+- **Unsubscribe** — `backend/routers/compliance.py`: public `GET/POST /u/{token}`
+  one-click unsubscribe + `POST /suppress`. `gmail_client.send_email()` sets
+  RFC 8058 `List-Unsubscribe` / `List-Unsubscribe-Post` headers. `main.py` gains
+  `TrustedHostMiddleware` (first public mutating route).
+- **Bounce handling** — `gmail_client.detect_bounces()` parses Mailer-Daemon
+  NDRs; `sequence_executor.process_bounces()` suppresses hard bounces; new
+  `POST /sequences/process-bounces` + `n8n-workflows/bounce_checker.json` (6-hourly).
+- **Send-path gates** — `sequence_executor.process_due_sequences()`: suppression
+  gate (both tracks) + jurisdiction gate (client track) + compliance footer +
+  per-lead unsubscribe URL on every client send. `leads.send_reply()` blocks
+  suppressed addresses.
+- **Provenance** — `backend/integrations/provenance.py` `set_lead_email()` records
+  email source + date + address type (GDPR Art 14 / CASL audit trail);
+  `enrich_leads_haiku.py` ingestion now persists email + normalised country.
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `py_compile` all new/modified files | ✓ |
+| `from backend.main import app` on vybe-desktop | ✓ — 53 routes |
+| New routes `/u/{token}`, `/suppress`, `/sequences/process-bounces` registered | ✓ |
+| `jurisdiction.classify` / `is_sendable` unit cases | ✓ (DE→C blocked, FR→A, CA→B) |
+
+### Known issues / outstanding (before this can send)
+
+- `backend/config/footer.txt` — legal entity name + registered postal address are
+  placeholders; must be filled in.
+- Privacy notice must be published at `firstwaveai.com/privacy` (linked in every footer).
+- Email sourcing — 0 of 901 approved leads have an address; a sourcing run +
+  `country` backfill is required. Route B (CA/AU/NZ) needs `email_source='website_published'`.
+- `ALLOWED_HOSTS` (`TrustedHostMiddleware`) must be verified against all callers
+  before merge — a wrong list 400s the whole backend.
+- Broader RLS gap: all other tables (`leads`, `meetings`, etc.) still run without
+  RLS — pre-existing; `leads.unsubscribe_token` is now exposed if `leads` is
+  anon-readable. Worth a dedicated schema-wide RLS pass.
+- On merge to `main`: update `FIRSTWAVE_SYSTEM_CONTEXT.md` (new env vars, schema,
+  routes) and the `CLAUDE.md` port/phase notes. Merging auto-deploys to the Pi.
+
+### Outstanding from earlier (separate, `main` branch)
+
+- The overnight DM-research run (509 leads researched + redrafted) has no
+  `WORK_LOG.md` entry on `main`, and `scripts/research_decision_makers.py` has
+  uncommitted `--filter`/`--skip-researched`/`--slice` changes on vybe-desktop.
+
+---
 ## 2026-05-19 (evening) — Session: backlog catch-up push + cross-machine sync bootstrap
 
 Brought all three machines (vybe-desktop, surface-pro-3, vybe-pi) onto the same `main` HEAD after a week of unpushed work on vybe-desktop. Bootstrapped a separate `~/.claude-config` sync system (private GitHub repo `LDoyleDev/claude-config`) so memory + slash commands + global `CLAUDE.md` stay in sync across vybe-desktop and SP3 going forward.
