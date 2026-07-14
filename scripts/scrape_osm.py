@@ -142,6 +142,10 @@ out tags;
             "email": email,
             "brand": brand,
             "stars": stars,
+            # OSM element identity — lets a sourced osm_tag email cite its exact
+            # provenance: https://www.openstreetmap.org/{osm_type}/{osm_id}
+            "osm_type": elem.get("type", "node"),
+            "osm_id": elem.get("id"),
         })
 
     logger.info(f"  ✓ {len(hotels)} hotels from {country_name}")

@@ -1,6 +1,80 @@
 # FirstWave Pipeline — Work Log
 
 ---
+## 2026-05-20 — Session: email-sourcing pipeline (branch `feat/email-sourcing`)
+
+Built on `feat/email-sourcing` (off `feat/email-compliance-layer`) — **not merged**.
+The ~901 approved leads have no email address — the blocker to sending the 509
+cold-email drafts. The hotel `website` URLs were read during Haiku enrichment but
+never persisted, so there was nothing in the DB to scrape. Plan:
+`~/.claude/plans/plan-the-most-effective-piped-owl.md`.
+
+### Built — a tiered, near-zero-token sourcing pipeline (no Apollo)
+
+- **Migration `004_email_provenance.sql`** — append-only `email_provenance` audit
+  table (RLS on, backend-only) + `leads.email_provenance` JSONB summary column.
+  The GDPR Art 14 / CASL "conspicuous publication" defence trail. `schema.sql` synced.
+- **`provenance.set_lead_email`** — gains an optional `evidence` bundle: writes the
+  `leads.email_provenance` JSONB and appends an `email_provenance` audit row.
+- **`backend/integrations/email_extractor.py`** (new, pure) — mailto/regex email
+  extraction, junk filter, hotel-domain-aware scoring, opt-out phrase detection,
+  page-text helpers. Third-party-domain addresses (web agencies) are penalised
+  so they never win over the hotel's own address.
+- **`backend/integrations/website_fetch.py`** (new) — async multi-page raw-HTML
+  fetch; honours `robots.txt`.
+- **`backend/integrations/website_recovery.py`** (new) — re-match leads to raw
+  scrape JSONs by name+address (fuzzy name+city fallback); `companies` upsert to
+  persist recovered websites; `scrape_osm.py` subprocess fallback.
+- **`scripts/source_emails.py`** (new) — orchestrator. Tier 0 scope-reduction
+  (backfills `country` from `location` — the existing leads have it NULL — then
+  drops Route C / do_not_send); Tier 1 website recovery; Tier 2 OSM-tag emails
+  (Route A only); Tier 3 website scrape + evidence capture. `--dry-run`,
+  `--limit`, `--confirm-borderline-only`; checkpoint JSONL for resumability.
+- **`scripts/verify_email_sourcing.py`** (new) — read-only audit: coverage,
+  provenance completeness, route consistency (`is_sendable`), junk re-scan,
+  suppression cross-check, snapshot existence + SHA-256, disclaimer integrity.
+- **Disclaimer check (hybrid)** — deterministic phrase list + a Haiku confirm
+  (`DISCLAIMER_CLASSIFIER_SYSTEM_PROMPT`, gated by the vybe-trading window;
+  gated leads checkpoint as `pending_confirm` and are retried). A page that
+  restricts unsolicited email → lead skipped, address suppressed (`source_optout`,
+  a new `suppression.VALID_REASONS` value).
+- **`scrape_osm.py`** — now also emits `osm_type` / `osm_id` for the OSM permalink.
+- **`docs/LEGITIMATE_INTEREST_ASSESSMENT.md`** (new) — master LIA, marked DRAFT,
+  needs counsel review. `FIRSTWAVE_SYSTEM_CONTEXT.md` §5 updated.
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `py_compile` all new/modified files | ✓ |
+| `email_extractor` / `website_recovery` / `website_fetch` unit checks (SP3) | ✓ |
+| `--dry-run --limit 25` on SP3 vs live Supabase | ✓ — 17/25 sourced (10 osm_tag, 7 website_published); 25/25 websites recovered |
+
+vybe-desktop's `.env` was copied to SP3 (2026-05-20→21) so the run executes on
+SP3. The dry-run surfaced + fixed three bugs — see the `fix(sourcing)` commit:
+country NULL on all 901 leads (Tier 0 now backfills it), dry-run poisoning the
+checkpoint, and OSM `mailto:`-prefixed email tags stored verbatim.
+
+### Run instructions (on vybe-desktop, populated `.env` + scrape data)
+1. `PYTHONPATH=. python scripts/source_emails.py --dry-run --limit 25`
+2. `PYTHONPATH=. python scripts/source_emails.py --dry-run` — review match-rate,
+   projected yield, Route B coverage, disclaimer skips.
+3. `PYTHONPATH=. python scripts/source_emails.py` — live (Tiers 1-3). Run during
+   an allowed LLM window; re-run to finish any `pending_confirm` leads.
+4. `PYTHONPATH=. python scripts/verify_email_sourcing.py` — audit.
+5. Run migration `004_email_provenance.sql` in the Supabase SQL editor first.
+
+### Known issues / outstanding
+- Migration 004 not yet run on the live DB.
+- Tier 1 match-rate is the coverage ceiling (~55-80% realistic); Apollo-legacy
+  leads (~115, no `raw_name`/country) are largely unrecoverable.
+- Root-cause not fixed: `enrich_leads_haiku.py` still drops `website` and
+  `discovery.py` inserts a non-existent `company_website` column — future leads
+  will need this recovery again. Separate follow-up.
+- `docs/LEGITIMATE_INTEREST_ASSESSMENT.md` needs review by qualified counsel.
+- Branch not merged. Depends on `feat/email-compliance-layer` (provenance /
+  jurisdiction / suppression modules) — that branch should merge first.
+
+---
 ## 2026-05-20 — Session: email-compliance layer (branch `feat/email-compliance-layer`)
 
 Built on the `feat/email-compliance-layer` branch — **not merged to `main`**. The

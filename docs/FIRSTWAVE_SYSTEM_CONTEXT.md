@@ -271,6 +271,23 @@ INSERT INTO system_config (key, value) VALUES
   ('daily_discovery_limit', '20');
 ```
 
+### Email sourcing & provenance
+
+Approved leads are sourced an email address by `scripts/source_emails.py` — a
+tiered, near-zero-token pipeline (no Apollo): re-match leads to raw scrape JSONs
+to recover the hotel website (Tier 1, persisted into `companies`); take OSM
+`contact:email` tags (Tier 2, Route A only); scrape the hotel website for a
+published address (Tier 3, Route A + B). The only LLM call is a Haiku
+confirmation of the opt-out-disclaimer check, gated by the vybe-trading window.
+
+Every address is written through `provenance.set_lead_email`, which records a
+defensibility trail (see `docs/LEGITIMATE_INTEREST_ASSESSMENT.md`):
+- `leads.email_provenance` (JSONB) — the latest sourcing-evidence summary.
+- `email_provenance` table (migration 004) — append-only audit log: exact source
+  URL, page title, context snippet, `robots.txt` flag, disclaimer-check result,
+  retained HTML-snapshot SHA-256 + path, jurisdiction route, captured-at.
+HTML snapshots are stored gzipped under `data/email_evidence/` (gitignored).
+
 ---
 
 ## 6. SYSTEM PROMPTS

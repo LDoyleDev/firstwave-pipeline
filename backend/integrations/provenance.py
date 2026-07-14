@@ -36,6 +36,7 @@ def set_lead_email(
     source: str,
     address_type: str | None = None,
     country: str | None = None,
+    evidence: dict | None = None,
 ) -> dict:
     """Write email + provenance to a lead and derive its jurisdiction_route.
 
@@ -45,9 +46,15 @@ def set_lead_email(
         source: one of VALID_SOURCES — how the address was obtained.
         address_type: generic_role | named_individual (auto-classified if omitted).
         country: optional country (ISO or name) — also (re)derives jurisdiction_route.
+        evidence: optional sourcing-evidence bundle (source_url, source_page_title,
+            context_snippet, robots_allowed, optout_disclaimer_seen,
+            disclaimer_check_method, html_sha256, snapshot_path, notes). When given
+            it is stored on `leads.email_provenance` AND appended to the
+            `email_provenance` audit table — the GDPR Art 14 / CASL
+            "conspicuous publication" defence trail (see migration 004).
 
     Returns:
-        The payload written.
+        The payload written to the lead.
     """
     if "@" not in (email or ""):
         raise ValueError("a valid email address is required")
@@ -59,16 +66,48 @@ def set_lead_email(
     if address_type not in VALID_TYPES:
         address_type = classify_address_type(email)
 
+    now_iso = datetime.now(timezone.utc).isoformat()
+    route: str | None = None
+
     payload: dict = {
         "email": email,
         "email_source": source,
-        "email_sourced_at": datetime.now(timezone.utc).isoformat(),
+        "email_sourced_at": now_iso,
         "email_address_type": address_type,
     }
     if country:
         payload["country"] = jurisdiction.to_iso(country) or country
-        payload["jurisdiction_route"] = jurisdiction.classify(country)
+        route = jurisdiction.classify(country)
+        payload["jurisdiction_route"] = route
+
+    if evidence:
+        # Denormalised latest-provenance summary on the lead row.
+        payload["email_provenance"] = {**evidence, "email_source": source, "captured_at": now_iso}
 
     supabase.table("leads").update(payload).eq("id", lead_id).execute()
     logger.info("Set email for lead %s (source=%s, type=%s)", lead_id, source, address_type)
+
+    if evidence:
+        # Append-only audit row. Best-effort — the lead's email_provenance JSONB
+        # written above is the durable fallback record if this insert fails.
+        try:
+            supabase.table("email_provenance").insert({
+                "lead_id": lead_id,
+                "email": email,
+                "email_source": source,
+                "email_address_type": address_type,
+                "source_url": evidence.get("source_url"),
+                "source_page_title": evidence.get("source_page_title"),
+                "context_snippet": evidence.get("context_snippet"),
+                "robots_allowed": evidence.get("robots_allowed"),
+                "optout_disclaimer_seen": evidence.get("optout_disclaimer_seen", False),
+                "disclaimer_check_method": evidence.get("disclaimer_check_method"),
+                "html_sha256": evidence.get("html_sha256"),
+                "snapshot_path": evidence.get("snapshot_path"),
+                "jurisdiction_route": route,
+                "notes": evidence.get("notes"),
+            }).execute()
+        except Exception:
+            logger.exception("email_provenance audit insert failed for lead %s", lead_id)
+
     return payload

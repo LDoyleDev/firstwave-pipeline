@@ -40,7 +40,7 @@ CREATE TABLE leads (
   sequence_step INTEGER DEFAULT 0,
   last_contacted_at TIMESTAMPTZ,
   next_action_at TIMESTAMPTZ,
-  -- Compliance (see migrations/002_compliance_layer.sql)
+  -- Compliance (see migrations/002_compliance_layer.sql + 004_email_provenance.sql)
   country TEXT, -- normalised ISO 3166-1 alpha-2
   email_source TEXT, -- website_published | osm_tag | apollo | manual
   email_sourced_at TIMESTAMPTZ,
@@ -49,6 +49,7 @@ CREATE TABLE leads (
   jurisdiction_route TEXT, -- A | B | C | do_not_send
   consent_basis TEXT DEFAULT 'legitimate_interest',
   suppressed_at TIMESTAMPTZ,
+  email_provenance JSONB, -- latest sourcing-evidence summary (see email_provenance table)
   -- Meta
   source TEXT, -- 'phantombuster_linkedin' | 'apollo' | 'manual' | 'itb_list'
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -132,7 +133,7 @@ CREATE TABLE email_sequences (
 CREATE TABLE suppression_list (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL,
-  reason TEXT NOT NULL, -- unsubscribe | bounce | complaint | manual
+  reason TEXT NOT NULL, -- unsubscribe | bounce | complaint | manual | source_optout
   source_campaign TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -140,6 +141,29 @@ CREATE TABLE suppression_list (
 CREATE UNIQUE INDEX idx_suppression_email ON suppression_list (lower(email));
 -- Backend-only table — RLS on, no policies (service-role key bypasses RLS).
 ALTER TABLE suppression_list ENABLE ROW LEVEL SECURITY;
+
+-- EMAIL PROVENANCE (append-only sourcing audit log — see migrations/004_email_provenance.sql)
+CREATE TABLE email_provenance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id UUID REFERENCES leads(id),
+  email TEXT NOT NULL,
+  email_source TEXT NOT NULL, -- website_published | osm_tag | apollo | manual
+  email_address_type TEXT, -- generic_role | named_individual
+  source_url TEXT, -- exact page URL / OSM element permalink
+  source_page_title TEXT,
+  context_snippet TEXT, -- text surrounding the address on that page
+  robots_allowed BOOLEAN,
+  optout_disclaimer_seen BOOLEAN DEFAULT FALSE,
+  disclaimer_check_method TEXT, -- phrase_list | phrase_list+haiku | none
+  html_sha256 TEXT,
+  snapshot_path TEXT,
+  jurisdiction_route TEXT, -- A | B | C
+  captured_at TIMESTAMPTZ DEFAULT NOW(),
+  notes TEXT
+);
+CREATE INDEX idx_email_provenance_lead ON email_provenance (lead_id);
+-- Backend-only table — RLS on, no policies (service-role key bypasses RLS).
+ALTER TABLE email_provenance ENABLE ROW LEVEL SECURITY;
 
 -- VOICE COMMANDS LOG
 CREATE TABLE voice_commands (
