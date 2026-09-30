@@ -55,48 +55,62 @@ def test_gmail_send_email():
     mock_service.users.return_value.messages.return_value.send.assert_called_once()
 
 
-def test_gmail_check_replies_no_gmail_id():
-    """Sequence with no gmail_message_id returns replied=False without hitting Gmail API."""
-    mock_sb = MagicMock()
-    mock_sb.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
-        data={"gmail_message_id": None}
-    )
+def _gmail_service(thread_messages):
+    """A mock Gmail service whose thread returns `thread_messages`."""
+    svc = MagicMock()
+    svc.users.return_value.messages.return_value.get.return_value.execute.return_value = {
+        "threadId": "thread-xyz"
+    }
+    svc.users.return_value.threads.return_value.get.return_value.execute.return_value = {
+        "messages": thread_messages
+    }
+    return svc
 
+
+def test_gmail_check_replies_single_message_thread():
+    """Thread with only the sent message -> replied=False, no snippet."""
     with patch("backend.integrations.gmail_client._get_credentials"), \
-         patch("backend.integrations.gmail_client.build"), \
-         patch("backend.integrations.supabase_client.supabase", mock_sb):
+         patch("backend.integrations.gmail_client.build",
+               return_value=_gmail_service([{"snippet": "Original"}])):
 
         from backend.integrations.gmail_client import check_replies
-        result = check_replies(["seq-001"])
+        result = check_replies(["msg-111"])
 
+    assert result[0]["gmail_message_id"] == "msg-111"
     assert result[0]["replied"] is False
-    assert result[0]["sequence_id"] == "seq-001"
+    assert result[0]["reply_snippet"] is None
 
 
 def test_gmail_check_replies_thread_has_reply():
-    """Thread with 2 messages → replied=True."""
-    mock_service = MagicMock()
-    mock_service.users.return_value.messages.return_value.get.return_value.execute.return_value = {
-        "threadId": "thread-xyz"
-    }
-    mock_service.users.return_value.threads.return_value.get.return_value.execute.return_value = {
-        "messages": [{"snippet": "Original"}, {"snippet": "Reply here"}]
-    }
+    """Thread with 2 messages -> replied=True, snippet from the latest."""
+    with patch("backend.integrations.gmail_client._get_credentials"), \
+         patch("backend.integrations.gmail_client.build",
+               return_value=_gmail_service(
+                   [{"snippet": "Original"}, {"snippet": "Reply here"}])):
 
-    mock_sb = MagicMock()
-    mock_sb.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
-        data={"gmail_message_id": "msg-111"}
+        from backend.integrations.gmail_client import check_replies
+        result = check_replies(["msg-111"])
+
+    assert result[0]["gmail_message_id"] == "msg-111"
+    assert result[0]["replied"] is True
+    assert result[0]["reply_snippet"] == "Reply here"
+
+
+def test_gmail_check_replies_api_error_is_not_fatal():
+    """A Gmail API failure degrades to replied=False rather than raising."""
+    svc = MagicMock()
+    svc.users.return_value.messages.return_value.get.return_value.execute.side_effect = (
+        RuntimeError("gmail unavailable")
     )
 
     with patch("backend.integrations.gmail_client._get_credentials"), \
-         patch("backend.integrations.gmail_client.build", return_value=mock_service), \
-         patch("backend.integrations.supabase_client.supabase", mock_sb):
+         patch("backend.integrations.gmail_client.build", return_value=svc):
 
         from backend.integrations.gmail_client import check_replies
-        result = check_replies(["seq-001"])
+        result = check_replies(["msg-111", "msg-222"])
 
-    assert result[0]["replied"] is True
-    assert result[0]["reply_snippet"] == "Reply here"
+    assert [r["gmail_message_id"] for r in result] == ["msg-111", "msg-222"]
+    assert all(r["replied"] is False and r["reply_snippet"] is None for r in result)
 
 
 # ---------------------------------------------------------------------------
