@@ -195,3 +195,38 @@ INSERT INTO system_config (key, value) VALUES
   ('client_outreach_approved_count', '0'),
   ('investor_outreach_approved_count', '0'),
   ('daily_discovery_limit', '20');
+
+-- ============================================================================
+-- ROW LEVEL SECURITY  (see migrations/003_schema_wide_rls.sql)
+-- Access model:
+--   service_role  -> bypasses RLS — the backend uses this key.
+--   authenticated -> SELECT only, on the 5 tables the dashboard reads.
+--   anon          -> no access to any table (public key in the browser bundle).
+-- Writes go through the service-role backend; no write policy exists, so RLS
+-- default-deny blocks INSERT/UPDATE/DELETE from the browser. suppression_list
+-- already had RLS enabled inline above.
+-- ============================================================================
+ALTER TABLE companies        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leads            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE investor_targets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meetings         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_sequences  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE voice_commands   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_config    ENABLE ROW LEVEL SECURITY;
+
+-- Logged-in operator (authenticated) — SELECT only on the dashboard-read tables.
+CREATE POLICY authenticated_read ON leads            FOR SELECT TO authenticated USING (true);
+CREATE POLICY authenticated_read ON investor_targets FOR SELECT TO authenticated USING (true);
+CREATE POLICY authenticated_read ON meetings         FOR SELECT TO authenticated USING (true);
+CREATE POLICY authenticated_read ON voice_commands   FOR SELECT TO authenticated USING (true);
+CREATE POLICY authenticated_read ON email_sequences  FOR SELECT TO authenticated USING (true);
+
+GRANT SELECT ON leads, investor_targets, meetings, voice_commands, email_sequences
+  TO authenticated;
+
+-- anon (public browser key) is locked out of everything.
+REVOKE ALL ON companies, leads, investor_targets, meetings,
+              email_sequences, voice_commands, system_config
+  FROM anon;
+-- companies + system_config are backend-only — not even the operator reads them.
+REVOKE ALL ON companies, system_config FROM authenticated;

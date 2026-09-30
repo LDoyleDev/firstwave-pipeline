@@ -288,6 +288,42 @@ defensibility trail (see `docs/LEGITIMATE_INTEREST_ASSESSMENT.md`):
   retained HTML-snapshot SHA-256 + path, jurisdiction route, captured-at.
 HTML snapshots are stored gzipped under `data/email_evidence/` (gitignored).
 
+### Row Level Security & dashboard authentication
+
+Added 2026-05-20 — see `supabase/migrations/003_schema_wide_rls.sql` plus the
+Supabase Auth swap on the frontend (`frontend/src/AuthGate.jsx`).
+
+**Roles**
+- `service_role` — the backend's `SUPABASE_SERVICE_ROLE_KEY`. Bypasses RLS; full
+  read/write. Every backend write and every backend-only table read uses this.
+- `authenticated` — the logged-in operator. The dashboard signs in with a single
+  shared Supabase Auth account (`supabase.auth.signInWithPassword`). SELECT-only,
+  and only on the five tables the dashboard reads.
+- `anon` — the public key shipped in the browser bundle. Locked out of every
+  table (no policy + `REVOKE ALL`); used only to bootstrap the auth login call.
+
+**Per-table policy**
+
+| Tables | RLS | `authenticated` | `anon` |
+|--------|-----|-----------------|--------|
+| leads, investor_targets, meetings, voice_commands, email_sequences | on | SELECT (all rows) | none |
+| companies, system_config | on | none | none |
+| suppression_list | on (migration 002) | none | none |
+
+Writes from the browser are blocked everywhere — no INSERT/UPDATE/DELETE policy
+exists, so RLS default-deny applies. All writes go through the service-role backend.
+
+**Operational rules**
+- Public sign-up MUST stay disabled in the Supabase dashboard — a self-registered
+  user would land in the `authenticated` role and read all PII.
+- A new dashboard-read table needs a matching `authenticated` SELECT policy plus a
+  `GRANT SELECT ... TO authenticated`, or its queries silently return empty.
+- The FastAPI backend (publicly tunnelled at `firstwave.vybe-dev.com`) gates every
+  route except `/health`, `/u/{token}`, and `/webhook/telegram` behind an
+  `X-API-Key` header matching `BACKEND_API_KEY` — see `backend/auth.py`. It fails
+  closed (503) if the key is unset. The n8n crons and the dev dashboard send the
+  key; the production dashboard is read-only and carries none.
+
 ---
 
 ## 6. SYSTEM PROMPTS
@@ -390,6 +426,7 @@ APP_ENV=development
 APP_PORT=8000
 FRONTEND_PORT=5173
 OPERATOR_TIMEZONE=Europe/Berlin
+BACKEND_API_KEY=          # X-API-Key gate for non-public routes (backend/auth.py)
 ```
 
 ---

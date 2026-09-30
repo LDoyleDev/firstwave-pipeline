@@ -75,6 +75,79 @@ checkpoint, and OSM `mailto:`-prefixed email tags stored verbatim.
   jurisdiction / suppression modules) — that branch should merge first.
 
 ---
+## 2026-05-20 — Session: PII lockdown — RLS, Supabase Auth, backend API-key (branch `feat/rls-auth-layer`)
+
+Built on `feat/rls-auth-layer` (off `feat/email-compliance-layer`) — **not merged**.
+Closes the gap flagged in the email-compliance entry below: every table except
+`suppression_list` ran with no RLS, so the public anon key could read, write, and
+delete every row, and the dashboard `PasswordGate` was a client-side string compare,
+not real auth. Goal: make the lead/investor PII genuinely non-public.
+
+### Built
+
+- **Migration `supabase/migrations/003_schema_wide_rls.sql`** — enables RLS on all
+  7 unprotected tables (`companies`, `leads`, `investor_targets`, `meetings`,
+  `email_sequences`, `voice_commands`, `system_config`); adds `authenticated`
+  SELECT policies on the 5 the dashboard reads; `REVOKE ALL ... FROM anon` on every
+  table as a second lock. No write policies — RLS default-deny blocks browser
+  writes; the service-role backend is unaffected. Idempotent, transaction-wrapped.
+  `schema.sql` updated to match for fresh builds.
+- **Frontend Supabase Auth** — `PasswordGate.jsx` replaced by `AuthGate.jsx`: real
+  `supabase.auth.signInWithPassword` against a single shared operator account,
+  session restored via `getSession()` + `onAuthStateChange`. Removed the
+  localhost/Tailscale auth bypass — RLS now requires every session to be
+  `authenticated`. Sign-out button added to `TopBar`. `VITE_ACCESS_PASSWORD`
+  retired; new `VITE_AUTH_EMAIL` (frontend `.env.example` updated).
+- **Backend API-key auth** — `backend/auth.py`: an `X-API-Key` middleware gates
+  every route except `/health`, `/u/{token}`, and `/webhook/telegram`. Fails
+  closed (503) if `BACKEND_API_KEY` is unset — a missing key never means "open".
+  Wired in `main.py` inner of CORS so 401s still carry CORS headers. The 8 n8n
+  cron workflows now send the key via `={{ $env.BACKEND_API_KEY }}`; the dev
+  dashboard sends it via `VITE_API_KEY` (`frontend/src/api/client.js`).
+- Docs: RLS/auth + backend API-key model documented in
+  `FIRSTWAVE_SYSTEM_CONTEXT.md` §5/§9; `CLAUDE.md` frontend access line updated.
+
+### Validation
+| Check | Result |
+|-------|--------|
+| `npm run build` | ✓ clean (1.0 MB bundle) |
+| Migration SQL — transaction-wrapped, idempotent, reviewed | ✓ |
+| `from backend.main import app` (placeholder env) | ✓ — 53 routes; middleware CORS→TrustedHost→api_key |
+| 8 n8n workflow JSONs re-validated after the header patch | ✓ |
+
+### Cutover — Liam's manual steps
+
+**RLS + Supabase Auth — IN THIS ORDER (avoids a broken window):**
+1. Supabase dashboard → Authentication → create the operator user (email + password).
+2. Authentication → Email provider → **disable "Allow new users to sign up"** —
+   critical; a self-registered user lands in `authenticated` and reads all PII.
+3. Set `VITE_AUTH_EMAIL` in `frontend/.env` (+ Vercel env), deploy the frontend
+   AuthGate build, confirm login works.
+4. Run `003_schema_wide_rls.sql` in the Supabase SQL editor — this is the moment
+   the anon key loses read access, so it goes last.
+
+**Backend API-key — BEFORE the branch merges (merge auto-deploys the Pi):**
+5. Generate one secret value. Set `BACKEND_API_KEY` to it in the Pi's `.env`, in
+   the n8n environment (so `$env.BACKEND_API_KEY` resolves), and as `VITE_API_KEY`
+   in the dev `frontend/.env` — all three the same value.
+6. Re-import the 8 updated workflows from `n8n-workflows/` into n8n, then
+   deactivate+reactivate each (the running copy is cached in sqlite).
+   ⚠️ If `BACKEND_API_KEY` is missing from the Pi `.env` when the branch deploys,
+   the backend fails closed and 503s every non-public route.
+
+### Known issues / outstanding
+- `/webhook/telegram` stays unauthenticated by design (Telegram's servers cannot
+  send our key) — so it is spoofable; anyone can POST a fake update. Optional
+  hardening: register the webhook with a secret token and verify the
+  `X-Telegram-Bot-Api-Secret-Token` header.
+- Migration 003 not yet run on the live DB (gated on the cutover above).
+- `unsubscribe_token` stays readable by `authenticated` — acceptable now the anon
+  key is locked out (only the trusted operator session sees it). Optional further
+  hardening: move it to a backend-only table or column-revoke it.
+- Branch not merged; merging auto-deploys the backend to the Pi — see cutover
+  step 5 (`BACKEND_API_KEY` must exist on the Pi first, or the backend 503s).
+
+---
 ## 2026-05-20 — Session: email-compliance layer (branch `feat/email-compliance-layer`)
 
 Built on the `feat/email-compliance-layer` branch — **not merged to `main`**. The
