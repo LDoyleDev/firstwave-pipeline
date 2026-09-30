@@ -27,10 +27,12 @@ os.environ["BACKEND_API_KEY"] = TEST_API_KEY
 
 import fastapi.testclient as _testclient  # noqa: E402  (must follow the env setup)
 
-_PlainTestClient = _testclient.TestClient
+# The unpatched client, for tests that must control the header themselves
+# (passing headers={} is not enough — setdefault would still fill the key in).
+PlainTestClient = _testclient.TestClient
 
 
-class _AuthedTestClient(_PlainTestClient):
+class _AuthedTestClient(PlainTestClient):
     """TestClient that sends `X-API-Key` unless a test overrides it."""
 
     def __init__(self, *args, **kwargs):
