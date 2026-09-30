@@ -112,7 +112,7 @@ def research_lead(lead: dict) -> dict:
 
     evidence = {"hotel_name": hotel_name, "location": location, "snippets": [], "website_text": ""}
     for q in queries:
-        results = search_web(q, max_results=4)
+        results = search_web(q, max_results=2)
         for r in results:
             evidence["snippets"].append({
                 "query": q,
@@ -215,21 +215,44 @@ def main():
     parser.add_argument("--output", type=str, default="data/phase2/research_pilot.json")
     parser.add_argument("--dry-run", action="store_true",
                         help="Don't write to Supabase (still writes local JSON)")
+    parser.add_argument("--filter", choices=["with-draft", "approved"], default="with-draft",
+                        help="with-draft: only leads with existing outreach_email_1 (default, original behavior). "
+                             "approved: all outreach_approved=true leads, ordered by lead_score.")
+    parser.add_argument("--skip-researched", action="store_true",
+                        help="Skip leads whose enrichment_data.research.confidence > 0.5 (resume-safe)")
+    parser.add_argument("--incremental-write", action="store_true",
+                        help="Write the local JSON output after every lead (so a crash mid-run preserves progress)")
+    parser.add_argument("--slice-start", type=int, default=0,
+                        help="Process only rows[slice_start:slice_end] (after the order+limit fetch). For parallel workers.")
+    parser.add_argument("--slice-end", type=int, default=None,
+                        help="Process only rows[slice_start:slice_end] (after the order+limit fetch). None = end of list.")
     args = parser.parse_args()
 
-    logger.info(f"Loading top {args.top_n} highest-score leads with existing drafts...")
-    rows = (supabase.table("leads")
-            .select("*")
-            .not_.is_("outreach_email_1", "null")
-            .order("lead_score", desc=True)
-            .limit(args.top_n)
-            .execute().data)
-    logger.info(f"Got {len(rows)} leads")
+    logger.info(f"Loading up to {args.top_n} leads (filter={args.filter})...")
+    q = supabase.table("leads").select("*")
+    if args.filter == "with-draft":
+        q = q.not_.is_("outreach_email_1", "null")
+    elif args.filter == "approved":
+        q = q.eq("outreach_approved", True)
+    rows = q.order("lead_score", desc=True).limit(args.top_n).execute().data
+    logger.info(f"Got {len(rows)} leads from DB")
+    if args.slice_start or args.slice_end is not None:
+        rows = rows[args.slice_start:args.slice_end]
+        logger.info(f"Sliced to {len(rows)} leads (slice_start={args.slice_start}, slice_end={args.slice_end})")
 
     results = []
     for i, lead in enumerate(rows, 1):
         name = f"{lead.get('first_name','')} {lead.get('last_name','')}".strip() or lead.get("company") or "?"
         logger.info(f"[{i}/{len(rows)}] {name[:60]}  (score={lead.get('lead_score')})")
+
+        if args.skip_researched:
+            existing = (lead.get("enrichment_data") or {}).get("research") or {}
+            # Skip if any research has been written (presence of recent_signals or notes
+            # means we've already processed this lead, regardless of DM-found outcome).
+            if existing.get("recent_signals") is not None or existing.get("notes"):
+                conf = existing.get("confidence", 0)
+                logger.info(f"  ✓ already researched (conf={conf:.2f}), skipping")
+                continue
 
         old_draft_raw = lead.get("outreach_email_1") or "{}"
         try:
@@ -270,6 +293,11 @@ def main():
             "hooks": hooks,
             "elapsed_sec": round(elapsed, 1),
         })
+
+        if args.incremental_write:
+            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+            with open(args.output, "w") as f:
+                json.dump({"pilot": results, "partial": True, "processed": i, "total": len(rows)}, f, indent=2, ensure_ascii=False)
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "w") as f:
