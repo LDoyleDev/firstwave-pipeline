@@ -217,8 +217,8 @@ To use real data instead of samples:
 ## Commit History (This Session)
 
 ```
-556a115 enhance: Phase 2 scrapers with OpenCorporates API integration
-da4cd49 feat: Phase 2 scraper templates + orchestration + quickstart guide
+41b1462 enhance: Phase 2 scrapers with OpenCorporates API integration
+34e9170 feat: Phase 2 scraper templates + orchestration + quickstart guide
 1e4899e feat: Multi-shell parallel pipeline for Phase 2-4
 734cd0b feat: Phase 1 foundation for hotel lead generation
 ```

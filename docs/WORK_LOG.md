@@ -159,7 +159,7 @@ on the next auth-shaped change: key first, merge second.
 - `unsubscribe_token` stays readable by `authenticated` — acceptable now the anon
   key is locked out (only the trusted operator session sees it). Optional further
   hardening: move it to a backend-only table or column-revoke it.
-- Merged to `main` 2026-09-30 as `fb206dc`, which auto-deployed the Pi;
+- Merged to `main` 2026-09-30 as `0e22a0b`, which auto-deployed the Pi;
   `BACKEND_API_KEY` set at 17:54 (cutover step 5 above). Steps 5b and 6 remain.
 - `GET /leads/{lead_id}` returns 500 with a raw `postgrest.exceptions.APIError`
   (`22P02 invalid input syntax for type uuid`) for any non-UUID path segment,
@@ -175,7 +175,7 @@ overnight DM-research run produced 509 personalised cold-email drafts; before an
 are sent we needed a defensible legal position per jurisdiction and the
 compliance machinery to back it. Plan: `~/.claude/plans/consider-the-work-that-async-snowflake.md`.
 
-### Built (4 commits: `37d7a63`, `2033f46`, `8ae3104`, `d201db8`)
+### Built (4 commits: `31b9193`, `edcbd85`, `62417e5`, `6d438b9`)
 
 - **Schema** — `supabase/migrations/002_compliance_layer.sql`: `suppression_list`
   table (RLS enabled, no policies — service-role key bypasses it) + new `leads`
@@ -248,7 +248,7 @@ Brought all three machines (vybe-desktop, surface-pro-3, vybe-pi) onto the same 
   - `enhance(scrapers)`: broader country list (Ireland, AU, NZ, Malta, all Nordics + Eastern Europe + Mediterranean), relaxed contact-info gate, `verification_status` moved into `enrichment_data` JSON.
   - `feat(review)`: research section in `ReviewCard.jsx` (decision-maker name, signal URLs, hooks, confidence badge) + `scripts/research_decision_makers.py`.
   - `docs(work-log)`: catch-up entries for 2026-05-16, 2026-05-18 morning + late evening, 2026-05-19 (the OSM scrape + injection audit + post-enrichment chain push).
-- All three machines at `3d05361`. Vybe-pi auto-deploy ran via GitHub Actions runner; `firstwave-backend.service` restarted at 21:21:24 CEST, `/health` returns 200.
+- All three machines at `8cfde7f`. Vybe-pi auto-deploy ran via GitHub Actions runner; `firstwave-backend.service` restarted at 21:21:24 CEST, `/health` returns 200.
 
 ### Cross-machine Claude scaffold sync (separate `LDoyleDev/claude-config` repo)
 
@@ -379,8 +379,8 @@ OSM Overpass scrape to break past the Wikipedia ceiling — see same-day late-ev
 
 - `734cd0b` — Phase 1 foundation for hotel lead generation (2000-lead pipeline)
 - `1e4899e` — Multi-shell parallel pipeline for Phase 2-4 (lead generation)
-- `da4cd49` — Phase 2 scraper templates + orchestration + quickstart guide
-- `556a115` — Phase 2 scrapers with OpenCorporates API integration (with fallback)
+- `34e9170` — Phase 2 scraper templates + orchestration + quickstart guide
+- `41b1462` — Phase 2 scrapers with OpenCorporates API integration (with fallback)
 
 ### Built
 
