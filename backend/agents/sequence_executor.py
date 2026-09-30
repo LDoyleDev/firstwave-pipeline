@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 _BERLIN_OFFSET = timedelta(hours=2)  # CEST — close enough for send-window scheduling
 _SEND_WINDOW_START = 9   # 09:00 Berlin
 _SEND_WINDOW_END = 17    # 17:00 Berlin
-_PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://firstwave.vybe-dev.com").rstrip("/")
+_PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://firstwave.example.com").rstrip("/")
 
 
 def _now_utc() -> datetime:

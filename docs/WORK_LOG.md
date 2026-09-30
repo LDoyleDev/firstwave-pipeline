@@ -512,7 +512,7 @@ Final cross-pattern sweep on `~/.claude/`: zero credential-shaped strings remain
 | `ssh -T git@github-firstwave` from vybe-pi | `Hi LDoyleDev/firstwave-pipeline!` ✓ |
 | Deploy workflow on push of `77d02bb` (GitHub run 25684602593) | success — git pull, pip install, sudo cp, daemon-reload, systemctl restart all green |
 | `systemctl is-active firstwave-backend` post-deploy | `active` (PID 166235, ActiveEnterTimestamp 2026-05-11 18:57:38 CEST) |
-| `curl https://firstwave.vybe-dev.com/health` | `200` |
+| `curl https://firstwave.example.com/health` | `200` |
 
 ### Known issues / notes
 - ~20 other secrets in `~/firstwave-pipeline/.env` (Supabase ANON + SERVICE_ROLE keys, Telegram bot token, Groq, Google OAuth client secret + refresh token, Cal.com, Apollo, PhantomBuster, Gmail sender) are likely cached in older `~/.claude/file-history/` + `~/.claude/projects/*.jsonl` files on vybe-desktop from prior sessions that read `.env`. Separate rotation cycle planned for the most sensitive (`SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_REFRESH_TOKEN`, `TELEGRAM_BOT_TOKEN`).
@@ -644,7 +644,7 @@ Final cross-pattern sweep on `~/.claude/`: zero credential-shaped strings remain
 
 ### Done
 - Port 8002 stale uvicorn — confirmed gone; `firstwave-api.service` fully absent from systemd. No action needed.
-- **README.md** — rewritten "Starting the system" to reflect Pi deployment model (systemd, not manual terminal). All `localhost:8000` refs replaced with `firstwave.vybe-dev.com` / Tailscale URLs. `ANTHROPIC_API_KEY` env var replaced with Claude Max OAuth note.
+- **README.md** — rewritten "Starting the system" to reflect Pi deployment model (systemd, not manual terminal). All `localhost:8000` refs replaced with `firstwave.example.com` / Tailscale URLs. `ANTHROPIC_API_KEY` env var replaced with Claude Max OAuth note.
 - **docs/FIRSTWAVE_SYSTEM_CONTEXT.md Section 4** — corrected Python 3.11→3.12, AI entry (API key → Claude Max OAuth token), hosting block updated to reflect Pi + n8n + Cloudflare Tunnel + CI/CD runner.
 - **docs/WORK_LOG.md** — resolved open issues from earlier session (port 8002 and follow_up_executor.json stub).
 - **Smoke test — all API-testable surfaces green:**
@@ -695,7 +695,7 @@ Final cross-pattern sweep on `~/.claude/`: zero credential-shaped strings remain
 - `start.sh` — wrapper script that sources `.env` and starts uvicorn on port 8002; bypasses systemd EnvironmentFile parsing quirks
 - `/etc/systemd/system/firstwave-api.service` — systemd service using `start.sh` as ExecStart; runs as user `vybe`; Restart=always
 - nginx config on Pi — port 3001 serving `frontend/dist/`, `/api/` proxied to FastAPI on 8002
-- Cloudflare Tunnel config updated to route `firstwave.vybe-dev.com` to `localhost:3001`
+- Cloudflare Tunnel config updated to route `firstwave.example.com` to `localhost:3001`
 - `.github/workflows/deploy.yml` — GitHub Actions workflow using self-hosted runner on Pi; triggers on push to main; pulls, rebuilds frontend, restarts API
 - Self-hosted GitHub Actions runner installed on Pi (`~/actions-runner`), running as systemd service
 
@@ -730,7 +730,7 @@ Final cross-pattern sweep on `~/.claude/`: zero credential-shaped strings remain
   - n8n workflow import table
   - Troubleshooting guide (5 common failure modes with fix commands)
   - Full environment variables reference
-- Verified Tailscale access: http://100.113.88.92:5173 (frontend bound to 0.0.0.0 in vite.config.js)
+- Verified Tailscale access: http://<desktop-tailscale-ip>:5173 (frontend bound to 0.0.0.0 in vite.config.js)
 - Verified FastAPI binds to 0.0.0.0 (pass `--host 0.0.0.0` to uvicorn)
 
 ### Validation
@@ -741,7 +741,7 @@ Final cross-pattern sweep on `~/.claude/`: zero credential-shaped strings remain
 | DB connection | ✓ |
 | Investor contacts populated | 50/50 ✓ |
 | warm_path coverage | 20/50 (all Tier 1 + Tier 5 + key Tier 6) ✓ |
-| Tailscale IP | 100.113.88.92 ✓ |
+| Tailscale IP | <desktop-tailscale-ip> ✓ |
 | Frontend build | ✓ clean (984KB) |
 
 ### All phases complete

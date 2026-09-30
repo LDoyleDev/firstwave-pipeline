@@ -22,7 +22,7 @@ app.middleware("http")(api_key_middleware)
 _allowed_hosts = [
     h.strip() for h in os.getenv(
         "ALLOWED_HOSTS",
-        "firstwave.vybe-dev.com,localhost,127.0.0.1,100.108.149.115",
+        "localhost,127.0.0.1",
     ).split(",") if h.strip()
 ]
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
@@ -32,7 +32,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://0.0.0.0:5173",
-        "http://100.113.88.92:5173",
+        "http://localhost:5173",
         "https://firstwave-pipeline.vercel.app",
     ],
     allow_credentials=True,

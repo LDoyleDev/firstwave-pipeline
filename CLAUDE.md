@@ -26,14 +26,14 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 ## Machines
 | Machine | Tailscale IP | Role |
 |---------|-------------|------|
-| vybe-desktop | 100.113.88.92 | Dev machine |
-| vybe-pi | 100.108.149.115 | Always-on server (firstwave-backend on 8001) |
-| surface-pro-3 | 100.120.7.102 | Travel laptop — dev only, no production services |
+| vybe-desktop | <desktop-tailscale-ip> | Dev machine |
+| vybe-pi | <pi-tailscale-ip> | Always-on server (firstwave-backend on 8001) |
+| surface-pro-3 | <laptop-tailscale-ip> | Travel laptop — dev only, no production services |
 
 ## Pi infrastructure
-- **Cloudflare Tunnel:** single tunnel (`7c973a7f-c739-48b2-9acf-ebc5b7f4a387`) with two ingress rules:
-  - `api.vybe-dev.com` → `localhost:8000` (vybe-trading — do not touch)
-  - `firstwave.vybe-dev.com` → `localhost:8001` (firstwave backend)
+- **Cloudflare Tunnel:** single tunnel (`<TUNNEL-UUID>`) with two ingress rules:
+  - `api.example.com` → `localhost:8000` (vybe-trading — do not touch)
+  - `firstwave.example.com` → `localhost:8001` (firstwave backend)
   - Config: `~/.cloudflared/config.yml`
 - **`firstwave-backend.service`** — canonical backend service (port 8001), CI/CD deployed. Service file lives at `infra/firstwave-backend.service` (committed to repo); `deploy.yml` copies it and runs `daemon-reload` on every deploy. Uvicorn binds `--host 0.0.0.0 --port 8001`. n8n workflow URLs use `http://127.0.0.1:8001` (explicit IPv4 loopback — `localhost` resolves to `::1` in Node and would be refused). Tunnel/Tailscale callers reach the service via IPv4.
 - **`firstwave-api.service`** — legacy orphan (was on 8002 via start.sh) — disabled and removed
@@ -66,7 +66,7 @@ Meeting window: 10:30, 10:50, 11:10 Europe/Berlin only.
 - Start: `cd frontend && CHOKIDAR_USEPOLLING=1 npm run dev` (polling required on this machine — inotify limit)
 - Build check: `cd frontend && npm run build`
 - Access: http://localhost:5173 · sign in with the shared Supabase Auth operator account (email = `VITE_AUTH_EMAIL` in frontend/.env, password set in the Supabase dashboard). RLS requires every session to log in — there is no localhost bypass.
-- Tailscale: http://100.113.88.92:5173
+- Tailscale: http://<desktop-tailscale-ip>:5173
 
 ## Current phase
 CURRENT PHASE: Hotel lead-gen pipeline live (Phase 8) — 1000 leads in Supabase, 514 outreach-approved primaries, 104 with cold-email drafts. See docs/PHASE_2_3_COMPLETION.md + docs/NEXT_LEAD_SOURCES.md.

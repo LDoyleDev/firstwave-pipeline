@@ -1,7 +1,7 @@
 """API-key gate for the FastAPI backend.
 
 The backend is published on the public internet via the Cloudflare tunnel
-(`firstwave.vybe-dev.com`). Every route except a small public set requires an
+(`firstwave.example.com`). Every route except a small public set requires an
 `X-API-Key` header matching `BACKEND_API_KEY`. Server-to-server callers (the
 n8n crons, scripts) and the dev dashboard send the key; the genuinely public
 routes below are exempt because their callers cannot present it.

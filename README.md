@@ -21,11 +21,11 @@ cd frontend && CHOKIDAR_USEPOLLING=1 npm run dev
 | Surface | URL |
 |---|---|
 | Frontend (dev) | http://localhost:5173 |
-| Frontend (Tailscale) | http://100.113.88.92:5173 |
-| Backend API (Tailscale) | http://100.108.149.115:8001 |
-| Backend API (public) | https://firstwave.vybe-dev.com |
-| API docs | https://firstwave.vybe-dev.com/docs |
-| n8n (Tailscale) | http://100.108.149.115:5678 |
+| Frontend (Tailscale) | http://<desktop-tailscale-ip>:5173 |
+| Backend API (Tailscale) | http://<pi-tailscale-ip>:8001 |
+| Backend API (public) | https://firstwave.example.com |
+| API docs | https://firstwave.example.com/docs |
+| n8n (Tailscale) | http://<pi-tailscale-ip>:5678 |
 | Password | see `frontend/.env` → `VITE_ACCESS_PASSWORD` |
 
 **Restart backend (if needed — SSH to Pi first):**
@@ -35,7 +35,7 @@ sudo systemctl restart firstwave-backend
 
 **Register Telegram webhook** (run once):
 ```
-POST https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url=https://firstwave.vybe-dev.com/webhook/telegram
+POST https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url=https://firstwave.example.com/webhook/telegram
 ```
 
 ---
@@ -84,7 +84,7 @@ Informational queries (pipeline status, review queue, next meeting) execute imme
 
 **Via API:**
 ```bash
-curl -X POST https://firstwave.vybe-dev.com/leads \
+curl -X POST https://firstwave.example.com/leads \
   -H "Content-Type: application/json" \
   -d '{
     "first_name": "Anna",
@@ -99,13 +99,13 @@ curl -X POST https://firstwave.vybe-dev.com/leads \
 
 Then trigger enrichment + outreach:
 ```bash
-curl -X POST https://firstwave.vybe-dev.com/leads/{id}/enrich
+curl -X POST https://firstwave.example.com/leads/{id}/enrich
 ```
 The lead moves to `review_queue` after enrichment + outreach generation.
 
 **Via discovery run (bulk):**
 ```bash
-curl -X POST https://firstwave.vybe-dev.com/discovery/run \
+curl -X POST https://firstwave.example.com/discovery/run \
   -H "Content-Type: application/json" \
   -d '{
     "track": "client",
@@ -128,15 +128,15 @@ curl -X POST https://firstwave.vybe-dev.com/discovery/run \
 **Via API:**
 ```bash
 # Approve
-curl -X POST https://firstwave.vybe-dev.com/review-queue/{id}/approve \
+curl -X POST https://firstwave.example.com/review-queue/{id}/approve \
   -d '{"track": "client"}'
 
 # Reject
-curl -X POST https://firstwave.vybe-dev.com/review-queue/{id}/reject \
+curl -X POST https://firstwave.example.com/review-queue/{id}/reject \
   -d '{"track": "client"}'
 
 # Edit then approve
-curl -X POST https://firstwave.vybe-dev.com/review-queue/{id}/edit \
+curl -X POST https://firstwave.example.com/review-queue/{id}/edit \
   -d '{"track": "client", "new_subject": "...", "new_body": "...", "email_number": 1}'
 ```
 
@@ -148,19 +148,19 @@ After 20 approvals on a track, the system flips to `auto` mode and no longer req
 
 ```bash
 # All leads by stage
-curl https://firstwave.vybe-dev.com/leads
+curl https://firstwave.example.com/leads
 
 # Today's 3 meeting slots
-curl https://firstwave.vybe-dev.com/meetings/today
+curl https://firstwave.example.com/meetings/today
 
 # Review queue (split by track)
-curl https://firstwave.vybe-dev.com/review-queue
+curl https://firstwave.example.com/review-queue
 
 # Investor pipeline
-curl https://firstwave.vybe-dev.com/investors?tier=1
+curl https://firstwave.example.com/investors?tier=1
 
 # Active email sequences
-curl https://firstwave.vybe-dev.com/sequences?status=pending
+curl https://firstwave.example.com/sequences?status=pending
 ```
 
 ---

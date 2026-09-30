@@ -3,7 +3,7 @@
 **For:** Liam Doyle  
 **Purpose:** How to run your sales pipeline through voice and the dashboard  
 **Primary interface:** Telegram bot on your phone  
-**Secondary interface:** http://100.113.88.92:5173 (dashboard, any browser)
+**Secondary interface:** http://<desktop-tailscale-ip>:5173 (dashboard, any browser)
 
 ---
 
@@ -38,7 +38,7 @@ If you want the summary at any time, just type: **"What's my pipeline status?"**
 
 **1. Check the review queue**
 
-Either open the dashboard at http://100.113.88.92:5173/review, or ask the bot:
+Either open the dashboard at http://<desktop-tailscale-ip>:5173/review, or ask the bot:
 
 > *"Show me the review queue"*
 
@@ -93,7 +93,7 @@ The AI transcribes, classifies the outcome (hot/warm/cold/dead), drafts the foll
 
 > *"Got it. Outcome: warm. Here's your follow-up draft: [draft text]. Reply YES to send it."*
 
-Read the draft. If it's right, reply **YES** or say **"Yes, send it"** and it goes. If you want to tweak it, say **"Don't send — I'll edit it in the dashboard"** and go to http://100.113.88.92:5173/meetings to edit inline.
+Read the draft. If it's right, reply **YES** or say **"Yes, send it"** and it goes. If you want to tweak it, say **"Don't send — I'll edit it in the dashboard"** and go to http://<desktop-tailscale-ip>:5173/meetings to edit inline.
 
 ---
 
@@ -119,7 +119,7 @@ This is a manual action. Open LinkedIn, send the request. The system can't do th
 
 ## The dashboard
 
-Access at http://100.113.88.92:5173 (password in `.env`). Works on mobile via Tailscale.
+Access at http://<desktop-tailscale-ip>:5173 (password in `.env`). Works on mobile via Tailscale.
 
 ### Dashboard home (/)
 
@@ -269,7 +269,7 @@ The warm path notes in each investor's profile (visible in the dashboard at `/in
 
 **The bot didn't understand my voice note**
 
-Check the Voice Log at http://100.113.88.92:5173/voice — you'll see exactly what the AI parsed. If the intent is wrong, rephrase and try again. The bot always replies with what it understood, so you'll know immediately if it misread you.
+Check the Voice Log at http://<desktop-tailscale-ip>:5173/voice — you'll see exactly what the AI parsed. If the intent is wrong, rephrase and try again. The bot always replies with what it understood, so you'll know immediately if it misread you.
 
 **A follow-up email was sent and I want to cancel it**
 

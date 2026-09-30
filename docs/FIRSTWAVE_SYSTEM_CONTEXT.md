@@ -99,7 +99,7 @@ Backend:      Python 3.12 + FastAPI (port 8001 on vybe-pi, uvicorn --host 0.0.0.
               Service file: infra/firstwave-backend.service (committed); deploy.yml copies it + daemon-reload on each deploy
 Database:     Supabase (PostgreSQL, free tier)
 AI:           Ollama first (gpt-oss:20b primary · qwen3:14b local fallback) → Claude Max OAuth fallback
-              Ollama on vybe-desktop (100.113.88.92:11434, ROCm/GPU). Falls back to Claude if unreachable.
+              Ollama on vybe-desktop (<desktop-tailscale-ip>:11434, ROCm/GPU). Falls back to Claude if unreachable.
               Claude: token read from ~/.claude/.credentials.json — no API key; Claude Code must be installed + authed on Pi
 Transcription: Groq Whisper API
 Voice:        Telegram Bot (python-telegram-bot) → Groq → Claude intent parser
@@ -108,8 +108,8 @@ Calendar:     Google Calendar API via OAuth2
 Scheduling:   Cal.com free tier (API access included, custom availability slots)
 Lead data:    Apollo.io free tier (email enrichment) + PhantomBuster free tier (LinkedIn scraping)
 Automation:   n8n on vybe-pi (port 5678, n8n.service) — workflows target http://127.0.0.1:8001 (explicit IPv4; localhost resolves to ::1 in Node)
-Hosting:      vybe-pi (always-on, Cloudflare Tunnel → firstwave.vybe-dev.com); vybe-desktop for dev
-              Tailscale IPs: desktop 100.113.88.92, Pi 100.108.149.115
+Hosting:      vybe-pi (always-on, Cloudflare Tunnel → firstwave.example.com); vybe-desktop for dev
+              Tailscale IPs: desktop <desktop-tailscale-ip>, Pi <pi-tailscale-ip>
               CI/CD: GitHub Actions runner on Pi, auto-restarts firstwave-backend on push to main
 ```
 
@@ -318,7 +318,7 @@ exists, so RLS default-deny applies. All writes go through the service-role back
   user would land in the `authenticated` role and read all PII.
 - A new dashboard-read table needs a matching `authenticated` SELECT policy plus a
   `GRANT SELECT ... TO authenticated`, or its queries silently return empty.
-- The FastAPI backend (publicly tunnelled at `firstwave.vybe-dev.com`) gates every
+- The FastAPI backend (publicly tunnelled at `firstwave.example.com`) gates every
   route except `/health`, `/u/{token}`, and `/webhook/telegram` behind an
   `X-API-Key` header matching `BACKEND_API_KEY` — see `backend/auth.py`. It fails
   closed (503) if the key is unset. The n8n crons and the dev dashboard send the

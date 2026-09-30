@@ -21,7 +21,7 @@ SONNET = "sonnet"
 HAIKU = "haiku"  # most efficient for classification and intent parsing
 
 # Local Ollama inference (vybe-desktop over Tailscale)
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://100.113.88.92:11434")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 _OLLAMA_PRIMARY = "gpt-oss:20b"   # primary for all tasks — strongest reasoning, 131k context
 _OLLAMA_TIMEOUT = 120.0
 

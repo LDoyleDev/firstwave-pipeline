@@ -129,7 +129,7 @@ Shell-B: python enrich_leads_haiku.py --input batch_001.json --save-supabase  # 
 ### Pre-Execution (2026-05-22)
 - [ ] **Stop vybe-trading** (or confirm it's idle until Saturday evening)
 - [ ] **Check Redis cooloff key**: `redis-cli get llm:claude:cooloff_until` (should be None)
-- [ ] **Verify Ollama is running**: `curl http://100.113.88.92:11434/api/tags`
+- [ ] **Verify Ollama is running**: `curl http://<desktop-tailscale-ip>:11434/api/tags`
 - [ ] **Test Supabase connectivity**: `PYTHONPATH=. python -c "from backend.integrations.supabase_client import test_connection; print(test_connection())"`
 - [ ] **Create data/ directory**: `mkdir -p data/`
 

@@ -291,7 +291,7 @@ python scripts/enrich_leads_haiku.py \
 2026-05-15 23:13:17 [INFO] Loaded 57 leads from scripts/sample_leads.json
 2026-05-15 23:13:17 [INFO] Processing batch_001P (5 leads)...
 2026-05-15 23:13:18 [INFO] [batch_001P] Processing lead 1/5: Hotel Zur Post
-2026-05-15 23:13:18 [INFO] HTTP Request: POST http://100.113.88.92:11434/api/generate "HTTP/1.1 200 OK"
+2026-05-15 23:13:18 [INFO] HTTP Request: POST http://<desktop-tailscale-ip>:11434/api/generate "HTTP/1.1 200 OK"
 2026-05-15 23:13:18 [INFO]   Classification: Verified Hotel Operator (confidence: 0.92)
 2026-05-15 23:13:19 [INFO]   Enriched: boutique | DM: General Manager
 ```

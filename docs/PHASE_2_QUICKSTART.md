@@ -20,7 +20,7 @@
 
 ```bash
 # 1. Verify Ollama is running (optional for Phase 2, required for Phase 3)
-curl http://100.113.88.92:11434/api/tags
+curl http://<desktop-tailscale-ip>:11434/api/tags
 
 # 2. Verify Supabase connectivity
 PYTHONPATH=. python -c "from backend.integrations.supabase_client import test_connection; print('OK' if test_connection() else 'FAIL')"
@@ -220,7 +220,7 @@ mkdir -p data/phase2 logs
 
 ### Scraper hangs or times out
 - Check network connectivity: `curl -I https://google.com`
-- Check Ollama (if used): `curl http://100.113.88.92:11434/api/tags`
+- Check Ollama (if used): `curl http://<desktop-tailscale-ip>:11434/api/tags`
 - Manually interrupt (Ctrl+C) and re-run with `--limit 50` for testing
 
 ---
