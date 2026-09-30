@@ -18,7 +18,7 @@ def _fake_lead(overrides: dict = {}) -> dict:
         "id": FAKE_LEAD_ID,
         "first_name": "Hans",
         "last_name": "Müller",
-        "email": "hans@hotelgroup.de",
+        "email": "hans@example.com",
         "company": "Grand Hotel Group",
         "linkedin_url": "https://linkedin.com/in/hansmueller",
         "title": "CMO",
@@ -195,7 +195,7 @@ def test_discovery_run_manual():
     manual_lead = {
         "first_name": "Anna",
         "last_name": "Schmidt",
-        "email": "anna@boutiquecollection.eu",
+        "email": "anna@example.com",
         "title": "CEO",
         "company": "Boutique Collection",
         "linkedin_url": "https://linkedin.com/in/annaschmidt",

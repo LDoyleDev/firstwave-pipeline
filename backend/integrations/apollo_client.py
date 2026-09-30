@@ -30,7 +30,7 @@ def find_person_email(
     Args:
         first_name: Person's first name.
         last_name: Person's last name.
-        company_domain: Company domain (e.g. "grandhotelgroup.com").
+        company_domain: Company domain (e.g. "example.com").
 
     Returns:
         Email string if found, None otherwise.

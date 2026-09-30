@@ -176,7 +176,7 @@ curl -X POST https://firstwave.example.com/leads \
   -d '{
     "first_name": "Anna",
     "last_name": "Schmidt",
-    "email": "anna@hotelgroup.de",
+    "email": "anna@example.com",
     "title": "CMO",
     "company": "Grand Hotel Group",
     "linkedin_url": "https://linkedin.com/in/annaschmidt",

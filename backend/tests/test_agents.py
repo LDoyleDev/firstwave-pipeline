@@ -31,7 +31,7 @@ def test_enrichment_agent():
         "title": "VP Revenue",
         "company": "Grand Hotel Group",
         "linkedin_url": "https://linkedin.com/in/anna-schmidt",
-        "company_website": "https://grandhotelgroup.com",
+        "company_website": "https://example.com",
     }
     enrichment_result = {
         "lead_score": 78,
@@ -86,7 +86,7 @@ def test_client_outreach():
         "last_name": "Taylor",
         "title": "CMO",
         "company": "Coastal Resorts Ltd",
-        "email": "james.taylor@coastalresorts.com",
+        "email": "james.taylor@example.com",
         "enrichment_data": {
             "lead_score": 82,
             "warmth": "hot",
@@ -213,7 +213,7 @@ def test_followup_agent():
         "first_name": "Emma",
         "last_name": "Wilson",
         "company": "Alpine Hotels",
-        "email": "emma@alpinehotels.com",
+        "email": "emma@example.com",
     }
     followup_response = {
         "outcome": "hot",

@@ -120,7 +120,7 @@ def test_confirm_followup_sends_email():
         "follow_up_draft": "Hi Hans, great to chat...",
         "follow_up_sent": False,
         "outcome": "warm",
-        "leads": {"email": "hans@hotelgroup.de", "first_name": "Hans", "last_name": "Müller"},
+        "leads": {"email": "hans@example.com", "first_name": "Hans", "last_name": "Müller"},
     })
 
     with (
@@ -136,7 +136,7 @@ def test_confirm_followup_sends_email():
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "sent"
-        assert data["to"] == "hans@hotelgroup.de"
+        assert data["to"] == "hans@example.com"
 
 
 def test_confirm_followup_no_draft():
@@ -239,7 +239,7 @@ def test_intent_handle_send_followup():
         "follow_up_sent": False,
         "lead_id": FAKE_LEAD_ID,
         "investor_id": None,
-        "leads": {"email": "hans@hotelgroup.de", "first_name": "Hans", "last_name": "Müller"},
+        "leads": {"email": "hans@example.com", "first_name": "Hans", "last_name": "Müller"},
         "investor_targets": None,
     }
 

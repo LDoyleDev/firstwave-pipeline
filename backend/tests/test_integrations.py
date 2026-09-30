@@ -162,7 +162,7 @@ def test_apollo_find_person_email_found():
     """find_person_email returns email when Apollo responds with a match."""
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"person": {"email": "anna@grandhotelgroup.com"}}
+    mock_response.json.return_value = {"person": {"email": "anna@example.com"}}
 
     with patch("backend.integrations.apollo_client.httpx") as mock_httpx, \
          patch("backend.integrations.apollo_client.time"):
@@ -170,9 +170,9 @@ def test_apollo_find_person_email_found():
         mock_httpx.post.return_value = mock_response
 
         from backend.integrations.apollo_client import find_person_email
-        result = find_person_email("Anna", "Schmidt", "grandhotelgroup.com")
+        result = find_person_email("Anna", "Schmidt", "example.com")
 
-    assert result == "anna@grandhotelgroup.com"
+    assert result == "anna@example.com"
 
 
 def test_apollo_find_person_email_not_found():
@@ -203,7 +203,7 @@ def test_apollo_search_leads():
                 "last_name": "Taylor",
                 "title": "Revenue Manager",
                 "organization": {"name": "Grand Hotel Group"},
-                "email": "james@grandhotel.com",
+                "email": "james@example.com",
                 "linkedin_url": "https://linkedin.com/in/james-taylor",
                 "city": "Munich",
             }
@@ -225,7 +225,7 @@ def test_apollo_search_leads():
     assert len(result) == 1
     assert result[0]["first_name"] == "James"
     assert result[0]["company"] == "Grand Hotel Group"
-    assert result[0]["email"] == "james@grandhotel.com"
+    assert result[0]["email"] == "james@example.com"
 
 
 # ---------------------------------------------------------------------------
