@@ -1,12 +1,99 @@
 # FirstWave Pipeline
 
-Voice-controlled B2B sales automation for First Wave AI — two parallel tracks:
-client acquisition (hospitality operators) and investor fundraising.
+> **Status: retired.** This system ran in production from April to September 2026
+> and has been decommissioned. Nothing here is running, and the hosted database
+> that held its records has been deleted. The code is published as a record of
+> the work.
 
-Operator: **Liam Doyle** · liam@firstwaveai.com · Berlin  
-Meeting window: **10:30, 10:50, 11:10 Europe/Berlin only**
+A B2B sales-automation pipeline for a hospitality-focused AI product: sourcing
+hotel-operator leads, enriching them with an LLM, drafting outreach for human
+approval, and driving the whole thing from a Telegram voice interface. Two
+parallel tracks — client acquisition and investor fundraising.
+
+Built solo. Deployed on a Raspberry Pi 5 behind a Cloudflare Tunnel, with a
+React dashboard on Vercel and Supabase (PostgreSQL) as the single source of
+truth. Python 3.12 / FastAPI backend, n8n for scheduled automation.
+
+## What's worth looking at
+
+- **Compliance-first email sourcing** — `scripts/source_emails.py`,
+  `backend/integrations/provenance.py`, `website_fetch.py`. A tiered,
+  near-zero-token pipeline that honours `robots.txt`, writes an append-only
+  provenance record for every address it finds (source URL, page title, context
+  snippet, retained HTML-snapshot SHA-256, jurisdiction route, captured-at), and
+  suppresses any address discovered on a page that restricts unsolicited email.
+- **Schema-wide row-level security** — `supabase/migrations/003_schema_wide_rls.sql`.
+  Per-role policies across every table, replacing a client-side password gate
+  with real Supabase Auth; browser writes blocked by default-deny.
+- **Send-path suppression and unsubscribe** — `002_compliance_layer.sql`,
+  `backend/routers/compliance.py`. Jurisdiction gates, `List-Unsubscribe`
+  headers, bounce detection, an append-only suppression list.
+- **Local-first LLM routing** — Ollama first, cloud models only as fallback,
+  with a Redis circuit breaker coordinating a shared account across projects.
+- **Deterministic pipeline glue** — SHA1 dedup on name+address+city, non-LLM
+  screening gates, and research runs that are resumable and parallel-sliceable
+  (`scripts/research_decision_makers.py`).
+
+## What was removed before publication
+
+Stated plainly, so it's clear what you won't find:
+
+- **Five "Phase 2 regional scrapers."** Four were scaffolding whose hardcoded
+  target lists were placeholder domains — they never produced usable output. The
+  fifth scraped two OTA sites whose terms prohibit it. Removed from the full
+  commit history, not only from the current tree.
+- **A draft Legitimate Interest Assessment.** It carried an explicit
+  "must be reviewed by qualified data-protection counsel before it is relied on"
+  status and was never relied on — no outreach was ever sent from this pipeline.
+  An unreviewed legal self-assessment is not something worth publishing.
+- **Live infrastructure identifiers** — tunnel UUID, internal network addresses,
+  and the public hostnames of unrelated services on the same host.
+
+The historical `docs/WORK_LOG.md` entries describing this work are annotated
+rather than deleted, so the record of what was built stays honest.
+
+## Data protection
+
+No personal data is in this repository or its history:
+
+- Scraped lead records lived in `data/` and in the hosted database. Neither was
+  ever tracked by git — verified across all commits.
+- The hosted Supabase project holding the lead records has been deleted.
+- `scripts/sample_leads.json` is a fully synthetic fixture: names use the local
+  word for "example", telephone numbers use the fictional `555-01xx` range and
+  are not dialable, and websites use `example.com`, which IANA reserves for
+  documentation.
+- Secret scanning (`gitleaks`) across the complete history reports no findings,
+  and `.env` was never committed.
+
+## Repository layout
+
+| Path | What's in it |
+|---|---|
+| `backend/` | FastAPI app — routers, agents, integrations, prompts |
+| `frontend/` | React + Vite operator dashboard |
+| `scripts/` | Sourcing, enrichment, dedup and screening pipeline |
+| `supabase/` | Schema and numbered migrations |
+| `n8n-workflows/` | Scheduled automation definitions |
+| `docs/` | Architecture, build phases, work log, runbooks |
+
+Start with `docs/FIRSTWAVE_SYSTEM_CONTEXT.md` for architecture and schema, and
+`docs/WORK_LOG.md` for the session-by-session development record.
+
+## Running it
+
+You can't run this as-is: it depended on a Supabase project, a Telegram bot, an
+Ollama host and an n8n instance, none of which exist any more. `.env.example`
+lists every variable it expected. The individual pipeline scripts under
+`scripts/` are the most legible starting point if you want to read rather than
+run.
 
 ---
+
+# Operating manual (as it ran in production)
+
+Everything below documents the system as it operated while live. It is kept for
+reference and no longer describes anything running.
 
 ## Starting the system
 
@@ -26,7 +113,7 @@ cd frontend && CHOKIDAR_USEPOLLING=1 npm run dev
 | Backend API (public) | https://firstwave.example.com |
 | API docs | https://firstwave.example.com/docs |
 | n8n (Tailscale) | http://<pi-tailscale-ip>:5678 |
-| Password | see `frontend/.env` → `VITE_ACCESS_PASSWORD` |
+| Sign-in | shared Supabase Auth operator account (`VITE_AUTH_EMAIL`) |
 
 **Restart backend (if needed — SSH to Pi first):**
 ```bash
