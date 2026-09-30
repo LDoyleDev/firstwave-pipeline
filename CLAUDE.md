@@ -91,7 +91,8 @@ Do these steps in order before finishing:
 
 4. **Commit and push**:
    ```
-   git add -A
+   git add <specific files>   # never `git add -A` — the Pi checkout contains
+                              # actions-runner/ with a credentials token
    git status   ← review what's being committed; exclude .env and venv/
    git commit -m "Phase X: <one-line summary>
 

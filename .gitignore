@@ -12,3 +12,7 @@ logs/
 
 # Per-developer Claude Code project settings + scheduled-task lock
 .claude/
+
+# Self-hosted GitHub Actions runner was installed inside this checkout on the
+# Pi; its .credentials file holds a token. Never track it.
+actions-runner/
