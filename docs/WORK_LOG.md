@@ -126,14 +126,25 @@ not real auth. Goal: make the lead/investor PII genuinely non-public.
 4. Run `003_schema_wide_rls.sql` in the Supabase SQL editor — this is the moment
    the anon key loses read access, so it goes last.
 
-**Backend API-key — BEFORE the branch merges (merge auto-deploys the Pi):**
-5. Generate one secret value. Set `BACKEND_API_KEY` to it in the Pi's `.env`, in
-   the n8n environment (so `$env.BACKEND_API_KEY` resolves), and as `VITE_API_KEY`
-   in the dev `frontend/.env` — all three the same value.
-6. Re-import the 8 updated workflows from `n8n-workflows/` into n8n, then
-   deactivate+reactivate each (the running copy is cached in sqlite).
-   ⚠️ If `BACKEND_API_KEY` is missing from the Pi `.env` when the branch deploys,
-   the backend fails closed and 503s every non-public route.
+**Backend API-key — step 5 DONE on the Pi 2026-09-30; 5b + 6 still open:**
+5. **DONE** — `BACKEND_API_KEY` generated (`openssl rand -hex 32`) and set in the
+   Pi's `~/firstwave-pipeline/.env` on 2026-09-30 17:54 CEST. `.env` tightened to
+   mode 600 (was 664, group-readable); backup at `.env.bak-2026-09-30`. Verified
+   on the Pi: `/analytics/conversion` → 401 without the header, 200 with it;
+   `/health` and `/u/{token}` still public.
+5b. **OPEN** — the same value still has to go into the n8n environment (so
+   `$env.BACKEND_API_KEY` resolves) and into `VITE_API_KEY` in the dev
+   `frontend/.env`. Read it back on the Pi with
+   `grep '^BACKEND_API_KEY=' ~/firstwave-pipeline/.env`.
+6. **OPEN** — re-import the 8 updated workflows from `n8n-workflows/` into n8n,
+   then deactivate+reactivate each (the running copy is cached in sqlite). Until
+   5b and 6 are both done the crons get 401, not 200.
+
+⚠️ **This ordering warning fired for real.** The branch was merged to `main`
+before step 5, so the push auto-deployed a backend with no key set and every
+non-public route 503'd from 15:05 to 17:54 on 2026-09-30. `/health`,
+`/u/{token}` and `/webhook/telegram` stayed up throughout. Honour the ordering
+on the next auth-shaped change: key first, merge second.
 
 ### Known issues / outstanding
 - `/webhook/telegram` stays unauthenticated by design (Telegram's servers cannot
@@ -144,8 +155,13 @@ not real auth. Goal: make the lead/investor PII genuinely non-public.
 - `unsubscribe_token` stays readable by `authenticated` — acceptable now the anon
   key is locked out (only the trusted operator session sees it). Optional further
   hardening: move it to a backend-only table or column-revoke it.
-- Branch not merged; merging auto-deploys the backend to the Pi — see cutover
-  step 5 (`BACKEND_API_KEY` must exist on the Pi first, or the backend 503s).
+- Merged to `main` 2026-09-30 as `fb206dc`, which auto-deployed the Pi;
+  `BACKEND_API_KEY` set at 17:54 (cutover step 5 above). Steps 5b and 6 remain.
+- `GET /leads/{lead_id}` returns 500 with a raw `postgrest.exceptions.APIError`
+  (`22P02 invalid input syntax for type uuid`) for any non-UUID path segment,
+  leaking driver detail on a publicly tunnelled route. Pre-existing, not from
+  this branch, and auth now gates it. Fix: validate the UUID, or catch `22P02`
+  and return 404/422.
 
 ---
 ## 2026-05-20 — Session: email-compliance layer (branch `feat/email-compliance-layer`)
