@@ -281,7 +281,7 @@ published address (Tier 3, Route A + B). The only LLM call is a Haiku
 confirmation of the opt-out-disclaimer check, gated by the vybe-trading window.
 
 Every address is written through `provenance.set_lead_email`, which records a
-defensibility trail (see `docs/LEGITIMATE_INTEREST_ASSESSMENT.md`):
+defensibility trail:
 - `leads.email_provenance` (JSONB) — the latest sourcing-evidence summary.
 - `email_provenance` table (migration 004) — append-only audit log: exact source
   URL, page title, context snippet, `robots.txt` flag, disclaimer-check result,

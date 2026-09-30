@@ -1,5 +1,14 @@
 # Phase 2 Quick Start — Data Source Scraping
 
+> **Note (repository made public, 2026-09-30):** the five regional Phase 2
+> scraper scripts referenced below (`scrape_eu_west.py`, `scrape_eu_central.py`,
+> `scrape_eu_south.py`, `scrape_us.py`, `scrape_booking_expedia.py`) were removed
+> before publication — four were placeholder scaffolding, and the fifth scraped
+> OTA sites whose terms prohibit it. The commands naming them no longer resolve.
+> The lead sourcing that actually worked is `scrape_osm.py` plus the
+> `website_fetch` / `provenance` pipeline. See the README.
+
+
 **Scheduled**: Saturday 2026-05-25, 09:00–16:00 UTC
 **Objective**: Scrape 1500–2000 raw hotel leads from 5 regions
 **Duration**: 6–8 hours (all 5 shells parallel) + 1 hour (dedup serial)

@@ -1,5 +1,14 @@
 # Pipeline Coordination — Multi-Shell Parallel Execution
 
+> **Note (repository made public, 2026-09-30):** the five regional Phase 2
+> scraper scripts referenced below (`scrape_eu_west.py`, `scrape_eu_central.py`,
+> `scrape_eu_south.py`, `scrape_us.py`, `scrape_booking_expedia.py`) were removed
+> before publication — four were placeholder scaffolding, and the fifth scraped
+> OTA sites whose terms prohibit it. The commands naming them no longer resolve.
+> The lead sourcing that actually worked is `scrape_osm.py` plus the
+> `website_fetch` / `provenance` pipeline. See the README.
+
+
 **Purpose**: Coordinate 4+ concurrent shells during Phase 2–4 without conflicts
 **Strategy**: Geographic/regional separation, serialized dedup, parallel enrichment
 **Timeline**: 2026-05-22 to 2026-07-10 (Phases 2–4)

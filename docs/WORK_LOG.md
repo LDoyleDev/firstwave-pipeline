@@ -41,6 +41,9 @@ never persisted, so there was nothing in the DB to scrape. Plan:
 - **`scrape_osm.py`** — now also emits `osm_type` / `osm_id` for the OSM permalink.
 - **`docs/LEGITIMATE_INTEREST_ASSESSMENT.md`** (new) — master LIA, marked DRAFT,
   needs counsel review. `FIRSTWAVE_SYSTEM_CONTEXT.md` §5 updated.
+  *(Removed before this repository was made public: an unreviewed legal
+  self-assessment is not something to publish. It was never relied on — no
+  outreach was sent from this pipeline.)*
 
 ### Validation
 | Check | Result |
@@ -71,6 +74,7 @@ checkpoint, and OSM `mailto:`-prefixed email tags stored verbatim.
   `discovery.py` inserts a non-existent `company_website` column — future leads
   will need this recovery again. Separate follow-up.
 - `docs/LEGITIMATE_INTEREST_ASSESSMENT.md` needs review by qualified counsel.
+  *(Superseded: removed before publication; see the note above.)*
 - Branch not merged. Depends on `feat/email-compliance-layer` (provenance /
   jurisdiction / suppression modules) — that branch should merge first.
 
@@ -381,6 +385,8 @@ OSM Overpass scrape to break past the Wikipedia ceiling — see same-day late-ev
 ### Built
 
 - 5 regional scrapers: `scrape_eu_west.py`, `scrape_eu_central.py`, `scrape_eu_south.py`, `scrape_us.py`, `scrape_booking_expedia.py`.
+  *(All five removed before publication — the first four were templates with
+  placeholder target lists, the fifth scraped OTA sites against their terms.)*
 - Pipeline glue: `combine_batches.py`, `dedup_leads.py` (SHA1 on name+address+city), `screening_filter.py` (non-LLM validation gates), `batch_split.py` (range-based).
 - Orchestration: `scrape_haiku_coordinator.sh` for the Wikipedia path.
 - Docs: `docs/PHASE_2_QUICKSTART.md`, `docs/PIPELINE_COORDINATION.md`, `docs/PHASE_2_3_COMPLETION.md`.
