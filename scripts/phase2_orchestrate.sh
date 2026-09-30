@@ -1,97 +1,46 @@
 #!/bin/bash
-# Phase 2 Master Orchestration Script
-# Runs all 5 regional scrapers, then dedup/screening pipeline
-# Usage: ./phase2_orchestrate.sh [--parallel|--sequential] [--test]
+# Phase 2 dedup / screening pipeline.
+#
+# NOTE: this script originally also ran five regional "scraper template" scripts
+# that were removed before this repository was made public — they targeted
+# company registries and OTA sites, and their hardcoded target lists were
+# placeholder scaffolding that never produced usable output. See README.
+#
+# It now operates on whatever batch files already exist in data/phase2/, and
+# runs the parts that did real work: combine -> dedup -> screen.
+#
+# Usage: ./phase2_orchestrate.sh
 
 set -e
 
 PHASE2_DIR="data/phase2"
 LOG_DIR="logs"
 
-# Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Parse arguments
-PARALLEL=true
-TEST_MODE=false
-
-for arg in "$@"; do
-  case $arg in
-    --sequential)
-      PARALLEL=false
-      shift
-      ;;
-    --parallel)
-      PARALLEL=true
-      shift
-      ;;
-    --test)
-      TEST_MODE=true
-      shift
-      ;;
-    *)
-      echo "Unknown option: $arg"
-      exit 1
-      ;;
-  esac
-done
-
-# Setup
 mkdir -p "$PHASE2_DIR" "$LOG_DIR"
 source venv/bin/activate
 
-echo -e "${BLUE}=== Phase 2 Master Orchestration ===${NC}"
-echo "Mode: $([ "$PARALLEL" = true ] && echo 'PARALLEL' || echo 'SEQUENTIAL')"
-echo "Test mode: $([ "$TEST_MODE" = true ] && echo 'ON (--limit 50)' || echo 'OFF')"
+echo -e "${BLUE}=== Phase 2: dedup / screening ===${NC}"
 echo ""
 
-# Common arguments
-LIMIT_ARG=""
-[ "$TEST_MODE" = true ] && LIMIT_ARG="--limit 50"
-
-# Run scrapers
-run_scraper() {
-  local name=$1
-  local script=$2
-  local output=$3
-
-  echo -e "${BLUE}[Shell] Starting: $name${NC}"
-  if [ "$PARALLEL" = true ]; then
-    python "$script" --output "$output" $LIMIT_ARG 2>&1 | tee "$LOG_DIR/shell_${name}.log" &
-    echo "  (running in background)"
-  else
-    python "$script" --output "$output" $LIMIT_ARG 2>&1 | tee "$LOG_DIR/shell_${name}.log"
-    echo "  (completed)"
-  fi
-}
-
-echo -e "${YELLOW}--- SCRAPING PHASE (5 shells) ---${NC}"
-run_scraper "a_eu_west" "scripts/scrape_eu_west.py" "$PHASE2_DIR/batch_001_050.json"
-run_scraper "b_eu_central" "scripts/scrape_eu_central.py" "$PHASE2_DIR/batch_051_100.json"
-run_scraper "c_eu_south" "scripts/scrape_eu_south.py" "$PHASE2_DIR/batch_101_150.json"
-run_scraper "d_us" "scripts/scrape_us.py" "$PHASE2_DIR/batch_151_250.json"
-run_scraper "e_apis" "scripts/scrape_booking_expedia.py" "$PHASE2_DIR/batch_251_290.json"
-
-# If parallel, wait for all scrapers
-if [ "$PARALLEL" = true ]; then
-  echo -e "${YELLOW}Waiting for all 5 scrapers to complete...${NC}"
-  wait
-  echo -e "${GREEN}✓ All scrapers completed${NC}"
-fi
-
-# Count leads
-echo ""
-echo -e "${YELLOW}--- SCRAPING SUMMARY ---${NC}"
+# Count whatever input batches are present
+echo -e "${YELLOW}--- INPUT BATCHES ---${NC}"
 total_leads=0
-for file in "$PHASE2_DIR"/batch_*.json; do
-  if [ -f "$file" ]; then
-    count=$(jq '.leads | length' "$file")
-    echo "  $(basename "$file"): $count leads"
-    total_leads=$((total_leads + count))
-  fi
+shopt -s nullglob
+batches=("$PHASE2_DIR"/batch_*.json)
+if [ ${#batches[@]} -eq 0 ]; then
+  echo -e "${RED}No batch files in $PHASE2_DIR — nothing to process.${NC}"
+  exit 1
+fi
+for file in "${batches[@]}"; do
+  count=$(jq '.leads | length' "$file")
+  echo "  $(basename "$file"): $count leads"
+  total_leads=$((total_leads + count))
 done
 echo "  TOTAL: $total_leads leads"
 
