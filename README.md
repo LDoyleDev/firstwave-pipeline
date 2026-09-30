@@ -88,6 +88,22 @@ lists every variable it expected. The individual pipeline scripts under
 `scripts/` are the most legible starting point if you want to read rather than
 run.
 
+## Licence and disclaimer
+
+Licensed under the Apache License 2.0 — see [LICENSE](LICENSE).
+
+This project is **retired and unmaintained**. It is published as a record of
+past work, not as a product, a template, or a recommended approach. It is
+provided "as is", without warranties or conditions of any kind, and the author
+accepts no liability arising from its use (LICENSE §§ 7–8).
+
+If you run any part of it, compliance is yours. Sourcing business contact data
+and sending outreach are regulated activities, and the applicable rules differ
+by jurisdiction. Nothing in this repository is legal advice — note in particular
+that the legal assessment drafted for the original deployment is **not** included
+here: it was never reviewed by counsel and was withdrawn (see "What was removed
+before publication" above).
+
 ---
 
 # Operating manual (as it ran in production)
