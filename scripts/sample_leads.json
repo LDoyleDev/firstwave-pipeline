@@ -1,403 +1,405 @@
 {
+  "_synthetic": true,
+  "_note": "Fully synthetic fixture for pilot/regression testing. Names use the local word for 'example'; telephone numbers use the fictional 555-01xx range and are not dialable; websites use example.com, reserved by IANA for documentation. No real business or person is described here.",
   "leads": [
     {
-      "name": "Hotel Zur Post",
-      "address": "Karlstrasse 12, 80333 Munich",
-      "country": "Germany",
-      "phone": "+49 89 123 4567",
-      "website": "www.hotelzurpost.de"
+      "name": "Example Hotel New York",
+      "address": "2 Example Street, New York, United States",
+      "phone": "+1 555 0101",
+      "website": "https://example.com/new-york-hotel",
+      "country": "United States"
     },
     {
-      "name": "Adlon Kempinski Hotel",
-      "address": "Unter den Linden 77, 10117 Berlin",
-      "country": "Germany",
-      "phone": "+49 30 226 1111",
-      "website": "www.adlon.de"
+      "name": "Example Hotel Los Angeles",
+      "address": "3 Example Street, Los Angeles, United States",
+      "phone": "+1 555 0102",
+      "website": "https://example.com/los-angeles-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hotel Am Markt",
-      "address": "Markt 5, 04109 Leipzig",
-      "country": "Germany",
-      "phone": "+49 341 123 4567",
-      "website": "www.hotel-am-markt.de"
+      "name": "Example Hotel Chicago",
+      "address": "4 Example Street, Chicago, United States",
+      "phone": "+1 555 0103",
+      "website": "https://example.com/chicago-hotel",
+      "country": "United States"
     },
     {
-      "name": "Waldorf Astoria Berlin",
-      "address": "Hardenbergstrasse 28, 10623 Berlin",
-      "country": "Germany",
-      "phone": "+49 30 3100 1234",
-      "website": "www.waldorfastoria-berlin.de"
+      "name": "Example Hotel Dallas",
+      "address": "5 Example Street, Dallas, United States",
+      "phone": "+1 555 0104",
+      "website": "https://example.com/dallas-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hotel Vier Jahreszeiten",
-      "address": "Neuer Wall 13, 20354 Hamburg",
-      "country": "Germany",
-      "phone": "+49 40 3494 0",
-      "website": "www.hvj.de"
+      "name": "Example Hotel Miami",
+      "address": "6 Example Street, Miami, United States",
+      "phone": "+1 555 0105",
+      "website": "https://example.com/miami-hotel",
+      "country": "United States"
     },
     {
-      "name": "Le Meurice",
-      "address": "228 Rue de Rivoli, 75001 Paris",
-      "country": "France",
-      "phone": "+33 1 4458 1010",
-      "website": "www.lemeurice.com"
+      "name": "Example Hotel Boston",
+      "address": "7 Example Street, Boston, United States",
+      "phone": "+1 555 0106",
+      "website": "https://example.com/boston-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hotel de Crillon",
-      "address": "10 Place de la Concorde, 75008 Paris",
-      "country": "France",
-      "phone": "+33 1 4471 1500",
-      "website": "www.crillon.com"
+      "name": "Example Hotel Seattle",
+      "address": "8 Example Street, Seattle, United States",
+      "phone": "+1 555 0107",
+      "website": "https://example.com/seattle-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hôtel Negresco",
-      "address": "37 Promenade des Anglais, 06000 Nice",
-      "country": "France",
-      "phone": "+33 4 9316 6400",
-      "website": "www.hotel-negresco-nice.com"
+      "name": "Example Hotel Denver",
+      "address": "9 Example Street, Denver, United States",
+      "phone": "+1 555 0108",
+      "website": "https://example.com/denver-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hotel La Cote Basque",
-      "address": "15 Avenue L. Barthou, 64200 Biarritz",
-      "country": "France",
-      "phone": "+33 5 5924 7733",
-      "website": "www.lacotebasque.fr"
+      "name": "Example Hotel Atlanta",
+      "address": "10 Example Street, Atlanta, United States",
+      "phone": "+1 555 0109",
+      "website": "https://example.com/atlanta-hotel",
+      "country": "United States"
     },
     {
-      "name": "Grand Hotel de Bordeaux",
-      "address": "2-5 Place de la Comédie, 33000 Bordeaux",
-      "country": "France",
-      "phone": "+33 5 5648 4444",
-      "website": "www.ghbordeaux.com"
+      "name": "Example Hotel Austin",
+      "address": "11 Example Street, Austin, United States",
+      "phone": "+1 555 0110",
+      "website": "https://example.com/austin-hotel",
+      "country": "United States"
     },
     {
-      "name": "The Savoy",
-      "address": "Strand, London WC2R 0EU",
-      "country": "United Kingdom",
-      "phone": "+44 20 7836 4343",
-      "website": "www.thesavoy.com"
+      "name": "Example Hotel Phoenix",
+      "address": "12 Example Street, Phoenix, United States",
+      "phone": "+1 555 0111",
+      "website": "https://example.com/phoenix-hotel",
+      "country": "United States"
     },
     {
-      "name": "Claridges",
-      "address": "Brook Street, London W1K 4HR",
-      "country": "United Kingdom",
-      "phone": "+44 20 7629 8860",
-      "website": "www.claridges.co.uk"
+      "name": "Example Hotel Portland",
+      "address": "13 Example Street, Portland, United States",
+      "phone": "+1 555 0112",
+      "website": "https://example.com/portland-hotel",
+      "country": "United States"
     },
     {
-      "name": "The Dorchester",
-      "address": "53 Park Lane, London W1K 1QA",
-      "country": "United Kingdom",
-      "phone": "+44 20 7629 8888",
-      "website": "www.dorchestercollection.com"
+      "name": "Example Hotel San Diego",
+      "address": "14 Example Street, San Diego, United States",
+      "phone": "+1 555 0113",
+      "website": "https://example.com/san-diego-hotel",
+      "country": "United States"
     },
     {
-      "name": "The Balmoral",
-      "address": "1 Princes Street, Edinburgh EH2 2EQ",
-      "country": "United Kingdom",
-      "phone": "+44 131 556 2414",
-      "website": "www.thebalmoral.com"
+      "name": "Example Hotel Nashville",
+      "address": "15 Example Street, Nashville, United States",
+      "phone": "+1 555 0114",
+      "website": "https://example.com/nashville-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hotel Mamounia",
-      "address": "Avenue Bab Jdid, 40000 Marrakech",
-      "country": "United Kingdom",
-      "phone": "+44 20 7580 0800",
-      "website": "www.mamounia.com"
+      "name": "Example Hotel Orlando",
+      "address": "16 Example Street, Orlando, United States",
+      "phone": "+1 555 0115",
+      "website": "https://example.com/orlando-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hotel Ritz Madrid",
-      "address": "Calle del Prado 5, 28014 Madrid",
-      "country": "Spain",
-      "phone": "+34 91 701 6767",
-      "website": "www.ritzprado.com"
+      "name": "Example Hotel Houston",
+      "address": "17 Example Street, Houston, United States",
+      "phone": "+1 555 0116",
+      "website": "https://example.com/houston-hotel",
+      "country": "United States"
     },
     {
-      "name": "Mandarin Oriental Barcelona",
-      "address": "Paseo de Gracia 38, 08007 Barcelona",
-      "country": "Spain",
-      "phone": "+34 93 496 8888",
-      "website": "www.mandarinoriental.com/barcelona"
+      "name": "Example Hotel Philadelphia",
+      "address": "18 Example Street, Philadelphia, United States",
+      "phone": "+1 555 0117",
+      "website": "https://example.com/philadelphia-hotel",
+      "country": "United States"
     },
     {
-      "name": "Hotel Alfonso XIII Sevilla",
-      "address": "San Fernando 2, 41004 Sevilla",
-      "country": "Spain",
-      "phone": "+34 95 491 7000",
-      "website": "www.hotelalfonsoxiii.com"
+      "name": "Hotel Esempio Rome",
+      "address": "19 Via Esempio, Rome, Italy",
+      "phone": "+39 555 0118",
+      "website": "https://example.com/rome-hotel",
+      "country": "Italy"
     },
     {
-      "name": "Arts Hotel Barcelona",
-      "address": "Marina 19-21, 08005 Barcelona",
-      "country": "Spain",
-      "phone": "+34 93 221 1000",
-      "website": "www.luxehotels.com/arts-barcelona"
+      "name": "Hotel Esempio Milan",
+      "address": "20 Via Esempio, Milan, Italy",
+      "phone": "+39 555 0119",
+      "website": "https://example.com/milan-hotel",
+      "country": "Italy"
     },
     {
-      "name": "Hotel Meliá Valencia",
-      "address": "Avda Pio X 7, 46004 Valencia",
-      "country": "Spain",
-      "phone": "+34 96 337 5000",
-      "website": "www.melia.com/es/hoteles/espana/valencia"
+      "name": "Hotel Esempio Venice",
+      "address": "21 Via Esempio, Venice, Italy",
+      "phone": "+39 555 0120",
+      "website": "https://example.com/venice-hotel",
+      "country": "Italy"
     },
     {
-      "name": "Rocco Forte Villa d'Este",
-      "address": "Via Regina 40, 22012 Cernobbio",
-      "country": "Italy",
-      "phone": "+39 031 3481",
-      "website": "www.roccofortehotels.com/villa-d-este"
+      "name": "Hotel Esempio Florence",
+      "address": "22 Via Esempio, Florence, Italy",
+      "phone": "+39 555 0121",
+      "website": "https://example.com/florence-hotel",
+      "country": "Italy"
     },
     {
-      "name": "Bauer Palazzo Hotel",
-      "address": "San Marco 1413, 30124 Venice",
-      "country": "Italy",
-      "phone": "+39 041 520 7022",
-      "website": "www.bauervenezia.com"
+      "name": "Hotel Esempio Naples",
+      "address": "23 Via Esempio, Naples, Italy",
+      "phone": "+39 555 0122",
+      "website": "https://example.com/naples-hotel",
+      "country": "Italy"
     },
     {
-      "name": "Hotel Excelsior Rome",
-      "address": "Via Vittorio Veneto 125, 00187 Rome",
-      "country": "Italy",
-      "phone": "+39 06 47 081",
-      "website": "www.excelsiorromehotel.com"
+      "name": "Hotel Esempio Turin",
+      "address": "24 Via Esempio, Turin, Italy",
+      "phone": "+39 555 0123",
+      "website": "https://example.com/turin-hotel",
+      "country": "Italy"
     },
     {
-      "name": "Palazzo Parigi Hotel",
-      "address": "Corso di Porta Nuova 1, 20121 Milan",
-      "country": "Italy",
-      "phone": "+39 02 6255 6456",
-      "website": "www.palazzoparigi.com"
+      "name": "Hotel Esempio Bologna",
+      "address": "25 Via Esempio, Bologna, Italy",
+      "phone": "+39 555 0124",
+      "website": "https://example.com/bologna-hotel",
+      "country": "Italy"
     },
     {
-      "name": "Grand Hotel Minerva Florence",
-      "address": "Piazza Santa Maria Novella 16, 50123 Florence",
-      "country": "Italy",
-      "phone": "+39 055 27230",
-      "website": "www.grandhotelminerva.com"
+      "name": "Hotel Beispiel Berlin",
+      "address": "26 Beispielstrasse, Berlin, Germany",
+      "phone": "+49 555 0125",
+      "website": "https://example.com/berlin-hotel",
+      "country": "Germany"
     },
     {
-      "name": "Pulitzer Amsterdam",
-      "address": "Prinsengracht 315-331, 1016 GZ Amsterdam",
-      "country": "Netherlands",
-      "phone": "+31 20 523 5235",
-      "website": "www.pulitzeramsterdam.com"
+      "name": "Hotel Beispiel Munich",
+      "address": "27 Beispielstrasse, Munich, Germany",
+      "phone": "+49 555 0126",
+      "website": "https://example.com/munich-hotel",
+      "country": "Germany"
     },
     {
-      "name": "De L'Europe Amsterdam",
-      "address": "Amstel 2-6, 1018 AJ Amsterdam",
-      "country": "Netherlands",
-      "phone": "+31 20 531 1777",
-      "website": "www.deleurope.com"
+      "name": "Hotel Beispiel Hamburg",
+      "address": "28 Beispielstrasse, Hamburg, Germany",
+      "phone": "+49 555 0127",
+      "website": "https://example.com/hamburg-hotel",
+      "country": "Germany"
     },
     {
-      "name": "Conservatorium Hotel Amsterdam",
-      "address": "Bloemgracht 2, 1016 LA Amsterdam",
-      "country": "Netherlands",
-      "phone": "+31 20 570 0000",
-      "website": "www.conservatoriumhotel.com"
+      "name": "Hotel Beispiel Frankfurt",
+      "address": "29 Beispielstrasse, Frankfurt, Germany",
+      "phone": "+49 555 0128",
+      "website": "https://example.com/frankfurt-hotel",
+      "country": "Germany"
     },
     {
-      "name": "Mainport Design Resort",
-      "address": "Koraalweg 7, 4351 GA Axel",
-      "country": "Netherlands",
-      "phone": "+31 164 696 969",
-      "website": "www.mainport.nl"
+      "name": "Hotel Beispiel Cologne",
+      "address": "30 Beispielstrasse, Cologne, Germany",
+      "phone": "+49 555 0129",
+      "website": "https://example.com/cologne-hotel",
+      "country": "Germany"
     },
     {
-      "name": "Park Hotel den Haag",
-      "address": "Molenstraat 53, 2513 BK Den Haag",
-      "country": "Netherlands",
-      "phone": "+31 70 362 8350",
-      "website": "www.parkhoteldenhaag.com"
+      "name": "Hotel Beispiel Dresden",
+      "address": "31 Beispielstrasse, Dresden, Germany",
+      "phone": "+49 555 0130",
+      "website": "https://example.com/dresden-hotel",
+      "country": "Germany"
     },
     {
-      "name": "Park Hyatt New York",
-      "address": "153 West 57th Street, New York, NY 10019",
-      "country": "United States",
-      "phone": "+1 212 758 1234",
-      "website": "www.hyatt.com"
+      "name": "Hotel Exemple Paris",
+      "address": "32 Rue Exemple, Paris, France",
+      "phone": "+33 555 0131",
+      "website": "https://example.com/paris-hotel",
+      "country": "France"
     },
     {
-      "name": "The Plaza Hotel",
-      "address": "768 Fifth Avenue, New York, NY 10019",
-      "country": "United States",
-      "phone": "+1 212 759 3000",
-      "website": "www.theplazany.com"
+      "name": "Hotel Exemple Lyon",
+      "address": "33 Rue Exemple, Lyon, France",
+      "phone": "+33 555 0132",
+      "website": "https://example.com/lyon-hotel",
+      "country": "France"
     },
     {
-      "name": "The Peninsula Beverly Hills",
-      "address": "9882 South Santa Monica Boulevard, Beverly Hills, CA 90210",
-      "country": "United States",
-      "phone": "+1 310 551 2888",
-      "website": "www.beverlyhills.peninsula.com"
+      "name": "Hotel Exemple Marseille",
+      "address": "34 Rue Exemple, Marseille, France",
+      "phone": "+33 555 0133",
+      "website": "https://example.com/marseille-hotel",
+      "country": "France"
     },
     {
-      "name": "Hotel del Coronado",
-      "address": "1500 Orange Avenue, San Diego, CA 92118",
-      "country": "United States",
-      "phone": "+1 619 435 6611",
-      "website": "www.hotdelcoronado.com"
+      "name": "Hotel Exemple Nice",
+      "address": "35 Rue Exemple, Nice, France",
+      "phone": "+33 555 0134",
+      "website": "https://example.com/nice-hotel",
+      "country": "France"
     },
     {
-      "name": "The Fairmont San Francisco",
-      "address": "950 Mason Street, San Francisco, CA 94108",
-      "country": "United States",
-      "phone": "+1 415 772 5000",
-      "website": "www.fairmont.com/san-francisco"
+      "name": "Hotel Exemple Bordeaux",
+      "address": "36 Rue Exemple, Bordeaux, France",
+      "phone": "+33 555 0135",
+      "website": "https://example.com/bordeaux-hotel",
+      "country": "France"
     },
     {
-      "name": "The Ritz-Carlton Chicago",
-      "address": "160 East Pearson Street, Chicago, IL 60611",
-      "country": "United States",
-      "phone": "+1 312 573 5223",
-      "website": "www.ritzcarlton.com/chicago"
+      "name": "Hotel Exemple Toulouse",
+      "address": "37 Rue Exemple, Toulouse, France",
+      "phone": "+33 555 0136",
+      "website": "https://example.com/toulouse-hotel",
+      "country": "France"
     },
     {
-      "name": "Four Seasons Boston",
-      "address": "200 Boylston Street, Boston, MA 02116",
-      "country": "United States",
-      "phone": "+1 617 338 4400",
-      "website": "www.fourseasons.com/boston"
+      "name": "Example Hotel London",
+      "address": "38 Example Road, London, United Kingdom",
+      "phone": "+44 555 0137",
+      "website": "https://example.com/london-hotel",
+      "country": "United Kingdom"
     },
     {
-      "name": "The St. Regis Dallas",
-      "address": "2911 Maple Avenue, Dallas, TX 75201",
-      "country": "United States",
-      "phone": "+1 214 922 0200",
-      "website": "www.stregis.com/dallas"
+      "name": "Example Hotel Manchester",
+      "address": "39 Example Road, Manchester, United Kingdom",
+      "phone": "+44 555 0138",
+      "website": "https://example.com/manchester-hotel",
+      "country": "United Kingdom"
     },
     {
-      "name": "Lancaster Hotel London",
-      "address": "1300 Lamar Street, Houston, TX 77010",
-      "country": "United States",
-      "phone": "+1 713 228 9500",
-      "website": "www.lancasterhotel.com"
+      "name": "Example Hotel Edinburgh",
+      "address": "40 Example Road, Edinburgh, United Kingdom",
+      "phone": "+44 555 0139",
+      "website": "https://example.com/edinburgh-hotel",
+      "country": "United Kingdom"
     },
     {
-      "name": "Royal Sonesta New Orleans",
-      "address": "300 Bourbon Street, New Orleans, LA 70130",
-      "country": "United States",
-      "phone": "+1 504 586 0300",
-      "website": "www.sonesta.com"
+      "name": "Example Hotel Birmingham",
+      "address": "41 Example Road, Birmingham, United Kingdom",
+      "phone": "+44 555 0140",
+      "website": "https://example.com/birmingham-hotel",
+      "country": "United Kingdom"
     },
     {
-      "name": "Fairmont Grand Del Mar",
-      "address": "5300 North Grand Del Mar Drive, San Diego, CA 92130",
-      "country": "United States",
-      "phone": "+1 858 314 1313",
-      "website": "www.fairmont.com/grand-del-mar"
+      "name": "Example Hotel Bristol",
+      "address": "42 Example Road, Bristol, United Kingdom",
+      "phone": "+44 555 0141",
+      "website": "https://example.com/bristol-hotel",
+      "country": "United Kingdom"
     },
     {
-      "name": "The Joule Dallas",
-      "address": "1530 Main Street, Dallas, TX 75201",
-      "country": "United States",
-      "phone": "+1 214 741 1530",
-      "website": "www.thejouledallas.com"
+      "name": "Example Hotel Glasgow",
+      "address": "43 Example Road, Glasgow, United Kingdom",
+      "phone": "+44 555 0142",
+      "website": "https://example.com/glasgow-hotel",
+      "country": "United Kingdom"
     },
     {
-      "name": "Nemacolin Woodlands Resort",
-      "address": "1001 Lafayette Drive, Farmington, PA 15437",
-      "country": "United States",
-      "phone": "+1 724 329 8555",
-      "website": "www.nemacolin.com"
+      "name": "Hotel Ejemplo Madrid",
+      "address": "44 Calle Ejemplo, Madrid, Spain",
+      "phone": "+34 555 0143",
+      "website": "https://example.com/madrid-hotel",
+      "country": "Spain"
     },
     {
-      "name": "Aman Venice",
-      "address": "Rio Tera Dei Servi, Venice, Italy",
-      "country": "Italy",
-      "phone": "+39 041 520 7333",
-      "website": "www.aman.com"
+      "name": "Hotel Ejemplo Barcelona",
+      "address": "45 Calle Ejemplo, Barcelona, Spain",
+      "phone": "+34 555 0144",
+      "website": "https://example.com/barcelona-hotel",
+      "country": "Spain"
     },
     {
-      "name": "Hotel Schweizerhof Bern",
-      "address": "Bahnhofplatz 11, 3011 Bern",
-      "country": "Switzerland",
-      "phone": "+41 31 326 8080",
-      "website": "www.schweizerhof-bern.ch"
+      "name": "Hotel Ejemplo Valencia",
+      "address": "46 Calle Ejemplo, Valencia, Spain",
+      "phone": "+34 555 0145",
+      "website": "https://example.com/valencia-hotel",
+      "country": "Spain"
     },
     {
-      "name": "Badrutt's Palace St. Moritz",
-      "address": "Via Serlas 27, 7500 St. Moritz",
-      "country": "Switzerland",
-      "phone": "+41 81 833 1000",
-      "website": "www.badruttspalace.com"
+      "name": "Hotel Ejemplo Seville",
+      "address": "47 Calle Ejemplo, Seville, Spain",
+      "phone": "+34 555 0146",
+      "website": "https://example.com/seville-hotel",
+      "country": "Spain"
     },
     {
-      "name": "Hotel de Paris Monte-Carlo",
-      "address": "Place du Casino, 98000 Monaco",
-      "country": "Monaco",
-      "phone": "+377 92 97 70 00",
-      "website": "www.hoteldepalris.com"
+      "name": "Hotel Ejemplo Malaga",
+      "address": "48 Calle Ejemplo, Malaga, Spain",
+      "phone": "+34 555 0147",
+      "website": "https://example.com/malaga-hotel",
+      "country": "Spain"
     },
     {
-      "name": "Steigenberger Wiesensee",
-      "address": "Wiesensee 23, 87534 Oberstaufen",
-      "country": "Germany",
-      "phone": "+49 8386 700",
-      "website": "www.steigenberger.com"
+      "name": "Hotel Ejemplo Bilbao",
+      "address": "49 Calle Ejemplo, Bilbao, Spain",
+      "phone": "+34 555 0148",
+      "website": "https://example.com/bilbao-hotel",
+      "country": "Spain"
     },
     {
-      "name": "La Maison du Palmier",
-      "address": "Antibes, 06600",
-      "country": "France",
-      "phone": "+33 4 9261 9361",
-      "website": "www.maisondupalmier.fr"
+      "name": "Voorbeeld Hotel Amsterdam",
+      "address": "50 Voorbeeldstraat, Amsterdam, Netherlands",
+      "phone": "+31 555 0149",
+      "website": "https://example.com/amsterdam-hotel",
+      "country": "Netherlands"
     },
     {
-      "name": "The Old Inn Hotel York",
-      "address": "113 High Street, York YO1 8RN",
-      "country": "United Kingdom",
-      "phone": "+44 1904 627 330",
-      "website": "www.theoldinn.co.uk"
+      "name": "Voorbeeld Hotel Rotterdam",
+      "address": "51 Voorbeeldstraat, Rotterdam, Netherlands",
+      "phone": "+31 555 0150",
+      "website": "https://example.com/rotterdam-hotel",
+      "country": "Netherlands"
     },
     {
-      "name": "Hotel Balneari Termes Victoriano",
-      "address": "Calderona de la Sierra, 46184",
-      "country": "Spain",
-      "phone": "+34 96 270 2100",
-      "website": "www.termasesvictoriano.com"
+      "name": "Voorbeeld Hotel Utrecht",
+      "address": "52 Voorbeeldstraat, Utrecht, Netherlands",
+      "phone": "+31 555 0151",
+      "website": "https://example.com/utrecht-hotel",
+      "country": "Netherlands"
     },
     {
-      "name": "Villa d'Este Como",
-      "address": "Via Regina 40, Cernobbio, 22012",
-      "country": "Italy",
-      "phone": "+39 031 3481",
-      "website": "www.villadestecomo.it"
+      "name": "Voorbeeld Hotel The Hague",
+      "address": "53 Voorbeeldstraat, The Hague, Netherlands",
+      "phone": "+31 555 0152",
+      "website": "https://example.com/the-hague-hotel",
+      "country": "Netherlands"
     },
     {
-      "name": "Amsterdam Inn Hotel",
-      "address": "Warmoesstraat 99, 1012 JA Amsterdam",
-      "country": "Netherlands",
-      "phone": "+31 20 623 5985",
-      "website": "www.amsterdaminn.nl"
+      "name": "Voorbeeld Hotel Eindhoven",
+      "address": "54 Voorbeeldstraat, Eindhoven, Netherlands",
+      "phone": "+31 555 0153",
+      "website": "https://example.com/eindhoven-hotel",
+      "country": "Netherlands"
     },
     {
-      "name": "Hilton Austin Downtown",
-      "address": "500 East 4th Street, Austin, TX 78701",
-      "country": "United States",
-      "phone": "+1 512 482 8000",
-      "website": "www.hilton.com/austin"
+      "name": "Voorbeeld Hotel Groningen",
+      "address": "55 Voorbeeldstraat, Groningen, Netherlands",
+      "phone": "+31 555 0154",
+      "website": "https://example.com/groningen-hotel",
+      "country": "Netherlands"
     },
     {
-      "name": "The Broadmoor Colorado Springs",
-      "address": "1 Lake Avenue, Colorado Springs, CO 80906",
-      "country": "United States",
-      "phone": "+1 719 634 7711",
-      "website": "www.thebroadmoor.com"
+      "name": "Hotel Beispiel Zurich",
+      "address": "56 Beispielweg, Zurich, Switzerland",
+      "phone": "+41 555 0155",
+      "website": "https://example.com/zurich-hotel",
+      "country": "Switzerland"
     },
     {
-      "name": "Homestead Miami Beach",
-      "address": "2727 Collins Avenue, Miami Beach, FL 33139",
-      "country": "United States",
-      "phone": "+1 305 531 7733",
-      "website": "www.homestead-miamibeach.com"
+      "name": "Hotel Beispiel Geneva",
+      "address": "57 Beispielweg, Geneva, Switzerland",
+      "phone": "+41 555 0156",
+      "website": "https://example.com/geneva-hotel",
+      "country": "Switzerland"
     },
     {
-      "name": "Ace Hotel Portland",
-      "address": "1022 SW Stark Street, Portland, OR 97205",
-      "country": "United States",
-      "phone": "+1 503 228 2277",
-      "website": "www.acehotel.com/portland"
+      "name": "Hotel Exemple Monaco",
+      "address": "58 Avenue Exemple, Monaco, Monaco",
+      "phone": "+377 555 0157",
+      "website": "https://example.com/monaco-hotel",
+      "country": "Monaco"
     }
   ]
 }
